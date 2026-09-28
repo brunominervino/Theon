@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Version to publish, e.g. 0.1.0-preview.1. Leave empty to use VersionPrefix from src/Directory.Build.props."
+        description: "Version to publish, e.g. 0.1.0 for a stable release. Leave empty for the prerelease default in src/Directory.Build.props."
         required: false
         type: string
       dry_run:
@@ -87,10 +87,17 @@ jobs:
 
       - name: Pack
         run: |
+          # An empty version means the default from src/Directory.Build.props, which is a
+          # prerelease. Cutting a stable release is a deliberate act: type the version.
+          #
+          # This used to clear VersionSuffix here, which meant the path of least effort — open
+          # the workflow, click Run, fill nothing in — published a stable version. Publishing a
+          # stable version is the least reversible thing this workflow can do, so it must not be
+          # what happens by default.
           if [ -n "${{ inputs.version }}" ]; then
             dotnet pack src/Theon/Theon.csproj -c Release -p:Version='${{ inputs.version }}'
           else
-            dotnet pack src/Theon/Theon.csproj -c Release -p:VersionSuffix=
+            dotnet pack src/Theon/Theon.csproj -c Release
           fi
 
       - name: Show what would be published
