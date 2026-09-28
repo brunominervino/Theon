@@ -93,14 +93,45 @@ This is not caution for its own sake: a stolen push credential that can cut a ta
 package if a tag is what triggers publishing. Requiring a manual dispatch means a stolen credential
 alone is not enough, and a version bump landing on `main` publishes nothing by itself.
 
-```bash
-dotnet nuget push artifacts/package/release/Theon.<version>.nupkg \
-  --source https://api.nuget.org/v3/index.json \
-  --api-key <key>
-```
+### How it is set up
 
-The `.snupkg` is pushed automatically alongside the `.nupkg` by the same command.
+The `release` workflow publishes through **NuGet Trusted Publishing**, so there is no long-lived
+API key anywhere — not in the repository secrets, not on a developer machine. GitHub issues a
+signed OIDC token describing the repository, the workflow file and the environment; nuget.org
+checks it against a registered policy and hands back a key valid for one hour. There is no
+publishing secret to leak, rotate, or accidentally print into a log.
 
-Before pushing, confirm: the full test suite passes on both target frameworks, `dotnet format
---verify-no-changes` is clean, the package has been installed and run from a local feed, and
-`VersionPrefix` is what you intend to publish.
+The policy on nuget.org must match the workflow exactly:
+
+| Policy field | Value |
+| --- | --- |
+| Repository Owner | `brunominervino` |
+| Repository | `Theon` |
+| Workflow File | `release.yml` (file name only, no path) |
+| Environment | `nuget` |
+| Scopes | Push, "new packages and package versions" |
+| Glob pattern | `Theon*` |
+
+`Theon*` rather than `*`, so this repository can publish the package and its future satellites and
+nothing else in the account.
+
+The GitHub side needs an environment named `nuget` with at least one required reviewer. That is
+what makes the job wait for a person, and nuget.org independently verifies the environment claim,
+so a run that skipped the gate cannot obtain a key either.
+
+### Running it
+
+Actions → release → Run workflow. Leave **dry run** ticked to build and inspect the package without
+publishing; untick it to publish for real. The workflow refuses to run from any branch but `main`,
+and runs the full test suite and the format check before it packs anything.
+
+Before publishing, confirm: the tests pass on both target frameworks, the format check is clean, the
+package has been installed and run from a local feed, and `VersionPrefix` is what you intend to
+publish.
+
+### A note on the first publish
+
+A policy for a private repository starts out *temporarily active* for seven days. nuget.org needs
+the GitHub repository and owner IDs to pin the policy to this exact repository, and it only learns
+them from a successful publish. Publish within that window and the policy becomes permanent; let it
+lapse and you can restart the window at any time.

@@ -62,9 +62,18 @@ jobs:
     needs: validate
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: read
+      # Lets this job mint the short-lived OIDC token that nuget.org exchanges for a
+      # temporary API key. Nothing else in the repository can request one.
+      id-token: write
+
     # This is the approval gate. Configure the `nuget` environment in the repository settings with
-    # at least one required reviewer; the job then waits for a human before it runs, and the API key
-    # is scoped to that environment so nothing else in the repository can reach it.
+    # at least one required reviewer; the job then waits for a human before it runs.
+    #
+    # The name also has to match the Environment field on the nuget.org trusted publishing policy.
+    # nuget.org validates it as a claim inside the OIDC token, so a workflow that ran outside this
+    # environment — and therefore outside the approval gate — is refused a key.
     environment:
       name: nuget
       url: https://www.nuget.org/packages/Theon
@@ -99,20 +108,30 @@ jobs:
           path: artifacts/package/release/*
           if-no-files-found: error
 
+      # Trusted Publishing: no long-lived API key is stored anywhere. GitHub issues a signed
+      # OIDC token describing this repository, workflow and environment; nuget.org checks it
+      # against the policy and returns a key valid for one hour. A leaked repository secret
+      # cannot publish, because there is no publishing secret to leak.
+      #
+      # This runs immediately before the push on purpose: the key expires after an hour, and
+      # each token buys exactly one key.
+      - name: NuGet login (OIDC to short-lived key)
+        if: ${{ !inputs.dry_run }}
+        uses: NuGet/login@v1
+        id: login
+        with:
+          # The nuget.org profile name that owns the package, not an e-mail address. It is
+          # public, since it appears on the package page, so it is not held as a secret.
+          user: bminervino
+
       - name: Push to NuGet
         if: ${{ !inputs.dry_run }}
-        env:
-          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
         run: |
-          if [ -z "$NUGET_API_KEY" ]; then
-            echo "::error::NUGET_API_KEY is not set on the nuget environment."
-            exit 1
-          fi
-          # No --skip-duplicate: republishing an existing version should fail loudly, because it
-          # means the version was not raised and somebody is about to be confused.
+          # No --skip-duplicate: republishing an existing version should fail loudly, because
+          # it means the version was not raised and somebody is about to be confused.
           dotnet nuget push artifacts/package/release/*.nupkg \
             --source https://api.nuget.org/v3/index.json \
-            --api-key "$NUGET_API_KEY"
+            --api-key "${{ steps.login.outputs.NUGET_API_KEY }}"
 
       - name: Say what happened
         run: |
