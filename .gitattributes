@@ -1,0 +1,27 @@
+# Normalise every text file to LF in the repository.
+#
+# Without this, a Windows clone commits CRLF, the CI job on ubuntu-latest then sees line endings
+# that disagree with .editorconfig (end_of_line = lf), and `dotnet format --verify-no-changes`
+# fails on a checkout nobody touched. Settling it in the first commit avoids a repository-wide
+# renormalisation later.
+* text=auto eol=lf
+
+# Windows-only scripts have to keep CRLF or cmd.exe mis-parses them.
+*.cmd text eol=crlf
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+
+# Binary, never converted and never diffed as text.
+*.png binary
+*.jpg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.gz binary
+*.dll binary
+*.exe binary
+*.pdb binary
+*.snk binary
+*.nupkg binary
+*.snupkg binary

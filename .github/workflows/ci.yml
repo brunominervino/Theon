@@ -1,0 +1,73 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  CI: true
+
+jobs:
+  build:
+    name: build and test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restore
+        run: dotnet restore Theon.slnx
+
+      - name: Build
+        run: dotnet build Theon.slnx -c Release --no-restore
+
+      # Tests run through the MSBuild Test target rather than `dotnet test`.
+      # See AGENTS.md for why.
+      - name: Test
+        run: dotnet build tests/Theon.Tests/Theon.Tests.csproj -c Release --no-restore -t:Test
+
+  format:
+    name: format
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Verify formatting
+        run: dotnet format Theon.slnx --verify-no-changes --severity warn
+
+  benchmarks:
+    name: benchmarks compile
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      # Compiled, not run: benchmark numbers from a shared CI runner are noise.
+      # Run them locally and report the three axes, as AGENTS.md requires.
+      - name: Build benchmarks
+        run: dotnet build benchmarks/Theon.Benchmarks/Theon.Benchmarks.csproj -c Release

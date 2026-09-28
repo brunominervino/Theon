@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+    <RootNamespace>Theon</RootNamespace>
+    <AssemblyName>Theon</AssemblyName>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PackageId>Theon</PackageId>
+    <Description>Strongly typed, fluent schema definition, parsing and validation for .NET. Zero dependencies, Native AOT friendly.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Theon.Tests" />
+    <InternalsVisibleTo Include="Theon.Benchmarks" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,123 @@
+# Publishing is started by a person, from this workflow, and never by a push or a tag.
+#
+# That is deliberate. If landing a tag published a package, then a stolen push credential would be
+# enough to publish one, with no human in the loop. Requiring a manual dispatch plus an environment
+# approval means a version bump reaching main is inert on its own, and a credential alone cannot
+# ship anything.
+name: release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to publish, e.g. 0.1.0-preview.1. Leave empty to use VersionPrefix from src/Directory.Build.props."
+        required: false
+        type: string
+      dry_run:
+        description: "Build and validate the package, but do not push it."
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  CI: true
+
+jobs:
+  validate:
+    name: validate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Refuse to release from anywhere but main
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "::error::Releases are cut from main only. This ref is ${{ github.ref }}."
+          exit 1
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restore
+        run: dotnet restore Theon.slnx
+
+      - name: Build
+        run: dotnet build Theon.slnx -c Release --no-restore
+
+      - name: Test
+        run: dotnet build tests/Theon.Tests/Theon.Tests.csproj -c Release --no-restore -t:Test
+
+      - name: Verify formatting
+        run: dotnet format Theon.slnx --verify-no-changes --severity warn
+
+  publish:
+    name: publish
+    needs: validate
+    runs-on: ubuntu-latest
+
+    # This is the approval gate. Configure the `nuget` environment in the repository settings with
+    # at least one required reviewer; the job then waits for a human before it runs, and the API key
+    # is scoped to that environment so nothing else in the repository can reach it.
+    environment:
+      name: nuget
+      url: https://www.nuget.org/packages/Theon
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Pack
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            dotnet pack src/Theon/Theon.csproj -c Release -p:Version='${{ inputs.version }}'
+          else
+            dotnet pack src/Theon/Theon.csproj -c Release -p:VersionSuffix=
+          fi
+
+      - name: Show what would be published
+        run: |
+          ls -la artifacts/package/release/
+          for f in artifacts/package/release/*.nupkg; do
+            echo "=== $f ==="
+            unzip -p "$f" '*.nuspec'
+          done
+
+      - name: Upload the package as a build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuget-package
+          path: artifacts/package/release/*
+          if-no-files-found: error
+
+      - name: Push to NuGet
+        if: ${{ !inputs.dry_run }}
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        run: |
+          if [ -z "$NUGET_API_KEY" ]; then
+            echo "::error::NUGET_API_KEY is not set on the nuget environment."
+            exit 1
+          fi
+          # No --skip-duplicate: republishing an existing version should fail loudly, because it
+          # means the version was not raised and somebody is about to be confused.
+          dotnet nuget push artifacts/package/release/*.nupkg \
+            --source https://api.nuget.org/v3/index.json \
+            --api-key "$NUGET_API_KEY"
+
+      - name: Say what happened
+        run: |
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            echo "### Dry run: package built and attached, nothing published." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### Published to nuget.org." >> $GITHUB_STEP_SUMMARY
+          fi

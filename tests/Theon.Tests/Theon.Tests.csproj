@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Theon.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/Theon/Theon.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- xunit.v3 ships Microsoft.Testing.Platform itself; VSTest packages are not needed. -->
+    <PackageReference Include="xunit.v3" />
+  </ItemGroup>
+
+</Project>
