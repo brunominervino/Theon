@@ -1,0 +1,75 @@
+<Project>
+
+  <!--
+    The regular-expression source generator emits internal types and documents them, so entries for
+    System.Text.RegularExpressions.Generated.* end up in the package's XML file. They describe types
+    a consumer cannot name and did not ask for.
+
+    Only that namespace is removed, and it is a fixed prefix owned by the generator rather than a
+    list of our own types, so nothing here goes stale when a type is added or renamed. Our own
+    internals stay out of the file by not carrying /// comments in the first place.
+  -->
+
+  <UsingTask TaskName="TrimGeneratedDocs"
+             TaskFactory="RoslynCodeTaskFactory"
+             AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <DocumentationPath ParameterType="System.String" Required="true" />
+    </ParameterGroup>
+    <Task>
+      <Using Namespace="System.Collections.Generic" />
+      <Using Namespace="System.IO" />
+      <Using Namespace="System.Linq" />
+      <Using Namespace="System.Xml.Linq" />
+      <Code Type="Fragment" Language="cs">
+        <![CDATA[
+        if (!File.Exists(DocumentationPath))
+        {
+            return true;
+        }
+
+        const string GeneratedPrefix = "System.Text.RegularExpressions.Generated.";
+
+        var doc = XDocument.Load(DocumentationPath);
+        var members = doc.Root == null ? null : doc.Root.Element("members");
+        if (members == null)
+        {
+            return true;
+        }
+
+        var doomed = members.Elements("member")
+            .Where(m =>
+            {
+                var name = (string)m.Attribute("name");
+                return name != null && name.Length > 2 && name.Substring(2).StartsWith(GeneratedPrefix);
+            })
+            .ToList();
+
+        foreach (var member in doomed)
+        {
+            member.Remove();
+        }
+
+        if (doomed.Count > 0)
+        {
+            doc.Save(DocumentationPath);
+            Log.LogMessage(MessageImportance.Normal,
+                "TrimGeneratedDocs: removed " + doomed.Count + " generated-regex entries.");
+        }
+        ]]>
+      </Code>
+    </Task>
+  </UsingTask>
+
+  <!--
+    DocumentationFile is only set inside a per-framework build. The outer multi-targeting build
+    runs this target too, with nothing to trim, so it has to be skipped there rather than passing
+    an empty path to a required parameter.
+  -->
+  <Target Name="TrimGeneratedDocumentation"
+          AfterTargets="Build"
+          Condition="'$(DocumentationFile)' != '' AND '$(DesignTimeBuild)' != 'true'">
+    <TrimGeneratedDocs DocumentationPath="$(DocumentationFile)" />
+  </Target>
+
+</Project>

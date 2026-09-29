@@ -2,15 +2,11 @@ using Theon.Errors;
 
 namespace Theon.Checks;
 
-/// <summary>
-/// A refinement that is only asked when a condition holds.
-/// </summary>
-/// <typeparam name="T">The object type being refined.</typeparam>
-/// <remarks>
-/// The same outcome can be written as a single predicate, <c>!condition || requirement</c>, but
-/// that is a material implication spelled as a disjunction: correct, and read wrongly by almost
-/// everyone almost every time. Keeping the two halves apart lets the call site say what it means.
-/// </remarks>
+// A refinement that is only asked when a condition holds.
+// The object type being refined.
+// The same outcome can be written as a single predicate, !condition || requirement, but
+// that is a material implication spelled as a disjunction: correct, and read wrongly by almost
+// everyone almost every time. Keeping the two halves apart lets the call site say what it means.
 internal sealed class ConditionalRefineCheck<T>(
     Func<T, bool> condition,
     Func<T, bool> requirement,
@@ -38,15 +34,11 @@ internal sealed class ConditionalRefineCheck<T>(
     }
 }
 
-/// <summary>
-/// A whole schema that is only applied when a condition holds.
-/// </summary>
-/// <typeparam name="T">The object type being validated.</typeparam>
-/// <remarks>
-/// This is the shape a real conditional usually has: a status reaching some value unlocks not one
-/// requirement but several, and they want to be written together rather than as a list of
-/// individually guarded predicates that each restate the same condition.
-/// </remarks>
+// A whole schema that is only applied when a condition holds.
+// The object type being validated.
+// This is the shape a real conditional usually has: a status reaching some value unlocks not one
+// requirement but several, and they want to be written together rather than as a list of
+// individually guarded predicates that each restate the same condition.
 internal sealed class ConditionalSchemaCheck<T>(Func<T, bool> condition, Schema<T, T> inner) : Check<T>
 {
     internal override void Run(ref ParseContext context, ref T value)

@@ -2,14 +2,10 @@ using Theon.Errors;
 
 namespace Theon.Checks;
 
-/// <summary>
-/// Compares a value against the current instant, read from a <see cref="TimeProvider"/>.
-/// </summary>
-/// <remarks>
-/// The clock is injected rather than read from <see cref="DateTime.UtcNow"/> so that a rule about
-/// "the past" can be tested. With an ambient clock, a test for a boundary condition either sleeps,
-/// or is written against a moving target and fails on a slow machine at midnight.
-/// </remarks>
+// Compares a value against the current instant, read from a imeProvider.
+// The clock is injected rather than read from UtcNow so that a rule about
+// "the past" can be tested. With an ambient clock, a test for a boundary condition either sleeps,
+// or is written against a moving target and fails on a slow machine at midnight.
 internal sealed class RelativeToNowCheck<T>(
     TimeProvider timeProvider,
     Func<TimeProvider, T> readNow,

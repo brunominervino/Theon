@@ -60,4 +60,6 @@
     <None Include="$(MSBuildThisFileDirectory)../README.md" Pack="true" PackagePath="\" Visible="false" />
   </ItemGroup>
 
+  <Import Project="$(MSBuildThisFileDirectory)../eng/TrimGeneratedDocs.targets" />
+
 </Project>

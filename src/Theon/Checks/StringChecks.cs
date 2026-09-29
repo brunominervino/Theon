@@ -75,7 +75,7 @@ internal sealed class ExactLengthCheck(int length) : Check<string>
     }
 }
 
-/// <summary>A check that rewrites the value instead of rejecting it.</summary>
+// A check that rewrites the value instead of rejecting it.
 internal sealed class OverwriteCheck(Func<string, string> transform) : Check<string>
 {
     internal override void Run(ref ParseContext context, ref string value) => value = transform(value);

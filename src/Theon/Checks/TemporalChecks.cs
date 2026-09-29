@@ -48,14 +48,12 @@ internal sealed class NotAfterCheck<T>(T bound, bool inclusive) : Check<T>
     }
 }
 
-/// <summary>Requires a <see cref="DateTime"/> to carry a specific <see cref="DateTimeKind"/>.</summary>
-/// <remarks>
-/// A <see cref="DateTime"/> whose <see cref="DateTime.Kind"/> is
-/// <see cref="DateTimeKind.Unspecified"/> compares against a UTC instant as though it were already
-/// UTC, and against a local one as though it were local. Neither is checked, neither errors, and
-/// the two disagree by the machine's offset. Requiring a kind turns that silent class of bug into
-/// a validation failure at the boundary.
-/// </remarks>
+// Requires a DateTime to carry a specific DateTimeKind.
+// A DateTime whose Kind is
+// Unspecified compares against a UTC instant as though it were already
+// UTC, and against a local one as though it were local. Neither is checked, neither errors, and
+// the two disagree by the machine's offset. Requiring a kind turns that silent class of bug into
+// a validation failure at the boundary.
 internal sealed class RequireKindCheck(DateTimeKind kind) : Check<DateTime>
 {
     internal override bool AbortsOnFailure => true;

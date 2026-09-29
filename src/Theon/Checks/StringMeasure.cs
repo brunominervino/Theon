@@ -1,28 +1,18 @@
 namespace Theon.Checks;
 
-/// <summary>
-/// Measures string length the way a user counts characters.
-/// </summary>
-/// <remarks>
-/// <para>
-/// <see cref="string.Length"/> counts UTF-16 code units, so a single emoji counts as two and a
-/// user who typed one character is told they typed two. Length bounds are therefore measured in
-/// Unicode code points, where a surrogate pair counts once.
-/// </para>
-/// <para>
-/// Code points, not grapheme clusters: an accented letter written as a base plus a combining mark
-/// still counts as two. Grapheme segmentation is culture- and version-dependent, which would make
-/// the same schema accept different strings on different machines. Code points are stable.
-/// </para>
-/// <para>
-/// The comparisons below only count when they have to. A string whose UTF-16 length already
-/// satisfies the bound cannot fail it, because the code-point count is never larger, so the common
-/// case never walks the string at all.
-/// </para>
-/// </remarks>
+// Measures string length the way a user counts characters.
+// Length counts UTF-16 code units, so a single emoji counts as two and a
+// user who typed one character is told they typed two. Length bounds are therefore measured in
+// Unicode code points, where a surrogate pair counts once.
+// Code points, not grapheme clusters: an accented letter written as a base plus a combining mark
+// still counts as two. Grapheme segmentation is culture- and version-dependent, which would make
+// the same schema accept different strings on different machines. Code points are stable.
+// The comparisons below only count when they have to. A string whose UTF-16 length already
+// satisfies the bound cannot fail it, because the code-point count is never larger, so the common
+// case never walks the string at all.
 internal static class StringMeasure
 {
-    /// <summary>Counts Unicode code points, treating an unpaired surrogate as one.</summary>
+    // Counts Unicode code points, treating an unpaired surrogate as one.
     internal static int CodePointCount(ReadOnlySpan<char> value)
     {
         var units = value.Length;
@@ -44,7 +34,7 @@ internal static class StringMeasure
         return count;
     }
 
-    /// <summary>Reports whether the code-point count is below <paramref name="minimum"/>.</summary>
+    // Reports whether the code-point count is below .
     internal static bool IsShorterThan(ReadOnlySpan<char> value, int minimum)
     {
         var units = value.Length;
@@ -63,7 +53,7 @@ internal static class StringMeasure
         return CodePointCount(value) < minimum;
     }
 
-    /// <summary>Reports whether the code-point count exceeds <paramref name="maximum"/>.</summary>
+    // Reports whether the code-point count exceeds .
     internal static bool IsLongerThan(ReadOnlySpan<char> value, int maximum)
     {
         if (value.Length <= maximum)
@@ -74,8 +64,8 @@ internal static class StringMeasure
         return CodePointCount(value) > maximum;
     }
 
-    /// <summary>Compares the code-point count against <paramref name="length"/>.</summary>
-    /// <returns>A negative value if shorter, zero if equal, a positive value if longer.</returns>
+    // Compares the code-point count against .
+    // A negative value if shorter, zero if equal, a positive value if longer.
     internal static int CompareLength(ReadOnlySpan<char> value, int length)
     {
         var units = value.Length;

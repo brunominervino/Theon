@@ -2,15 +2,11 @@ using Theon.Errors;
 
 namespace Theon.Schemas;
 
-/// <summary>
-/// Rejects <see langword="null"/> for a value type, and otherwise defers to an inner schema.
-/// </summary>
-/// <typeparam name="T">The underlying value type.</typeparam>
-/// <remarks>
-/// The counterpart to <c>AllowNull</c>. It exists because a property declared <c>DateTime?</c>
-/// needs a <c>Schema&lt;DateTime?&gt;</c>, and the only ones available were those that accept
-/// <see langword="null"/>. This one has the nullable shape and refuses the null.
-/// </remarks>
+// Rejects null for a value type, and otherwise defers to an inner schema.
+// The underlying value type.
+// The counterpart to AllowNull. It exists because a property declared DateTime?
+// needs a Schema<DateTime?>, and the only ones available were those that accept
+// null. This one has the nullable shape and refuses the null.
 internal sealed class RequiredValueSchema<T>(Schema<T> inner, string? message) : Schema<T?>
     where T : struct
 {
@@ -37,16 +33,12 @@ internal sealed class RequiredValueSchema<T>(Schema<T> inner, string? message) :
     }
 }
 
-/// <summary>
-/// Rejects <see langword="null"/> for a reference type, and otherwise defers to an inner schema.
-/// </summary>
-/// <typeparam name="T">The reference type.</typeparam>
-/// <remarks>
-/// Most reference schemas already reject <see langword="null"/>, so this changes no behaviour for
-/// them. What it changes is the declared type: a property annotated <c>string?</c> can be given a
-/// schema that is honestly typed <c>Schema&lt;string?&gt;</c> and still refuses the null, instead
-/// of the call site papering over the annotation.
-/// </remarks>
+// Rejects null for a reference type, and otherwise defers to an inner schema.
+// The reference type.
+// Most reference schemas already reject null, so this changes no behaviour for
+// them. What it changes is the declared type: a property annotated string? can be given a
+// schema that is honestly typed Schema<string?> and still refuses the null, instead
+// of the call site papering over the annotation.
 internal sealed class RequiredReferenceSchema<T>(Schema<T> inner, string? message) : Schema<T?>
     where T : class
 {
