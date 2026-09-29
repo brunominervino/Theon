@@ -49,6 +49,16 @@ public class ParsingBenchmarks
             .Field(x => x.Age, Theo.Int().Min(18).Max(120))
             .Field(x => x.CompanyId, Theo.Guid().NotEmpty());
 
+    private static readonly Schema<Ticket> Conditional =
+        Theo.Object<Ticket>()
+            .Field(x => x.Title, Theo.String().NotEmpty())
+            .Field(x => x.Status, Theo.Enum<TicketStatus>())
+            .When(x => x.Status == TicketStatus.Completed, rules => rules
+                .Field(x => x.CompletedAt, Theo.DateTime().RequireUtc().Required())
+                .Field(x => x.ClosedBy, Theo.String().NotEmpty().Required()));
+
+    private Ticket _conditionSkipped = null!;
+    private Ticket _conditionMet = null!;
     private CreateUserValue _validStruct;
     private string[] _emails = null!;
     private CreateUserRequest _valid = null!;
@@ -68,6 +78,16 @@ public class ParsingBenchmarks
         };
 
         _emails = [.. Enumerable.Range(0, 20).Select(i => $"user{i}@example.com")];
+
+        _conditionSkipped = new Ticket { Title = "open", Status = TicketStatus.Open };
+
+        _conditionMet = new Ticket
+        {
+            Title = "done",
+            Status = TicketStatus.Completed,
+            CompletedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+            ClosedBy = "ada",
+        };
 
         _validStruct = new CreateUserValue
         {
@@ -125,6 +145,12 @@ public class ParsingBenchmarks
 
     [Benchmark]
     public bool Object_FlatStruct_Valid() => FlatStruct.SafeParse(_validStruct).IsSuccess;
+
+    [Benchmark]
+    public bool When_ConditionFalse() => Conditional.SafeParse(_conditionSkipped).IsSuccess;
+
+    [Benchmark]
+    public bool When_ConditionTrue() => Conditional.SafeParse(_conditionMet).IsSuccess;
 
     [Benchmark]
     public bool Collection_20Emails_Valid() => EmailList.SafeParse(_emails).IsSuccess;

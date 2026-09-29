@@ -155,6 +155,101 @@ public sealed class ObjectSchema<T> : Schema<T>
         return new ObjectSchema<T>(_fields, [.. _checks, new PathedRefineCheck<T>(predicate, name, message)]);
     }
 
+    /// <summary>
+    /// Requires something of the object, but only when a condition holds.
+    /// </summary>
+    /// <typeparam name="TValue">The type of the property the error is reported against.</typeparam>
+    /// <param name="condition">When this returns <see langword="true"/>, the requirement applies.</param>
+    /// <param name="requirement">What must then be true of the object.</param>
+    /// <param name="path">Names the property the error belongs to.</param>
+    /// <param name="message">The message to report when the requirement is not met.</param>
+    /// <param name="pathExpression">Supplied by the compiler.</param>
+    /// <remarks>
+    /// The same rule can be written as a single <c>Refine</c> over
+    /// <c>!condition || requirement</c>, and that is a material implication spelled as a
+    /// disjunction: correct, and misread by almost everyone almost every time. Two predicates say
+    /// what is meant.
+    /// </remarks>
+    /// <example>
+    /// <code>
+    /// Theo.Object&lt;TaskItem&gt;()
+    ///     .Field(x =&gt; x.Status, Theo.Enum&lt;TaskStatus&gt;())
+    ///     .When(
+    ///         x =&gt; x.Status == TaskStatus.Completed,
+    ///         x =&gt; x.CompletedAt is not null,
+    ///         x =&gt; x.CompletedAt,
+    ///         "A completion date is required once the task is completed.");
+    /// </code>
+    /// </example>
+    public ObjectSchema<T> When<TValue>(
+        Func<T, bool> condition,
+        Func<T, bool> requirement,
+        Func<T, TValue> path,
+        string message,
+        [CallerArgumentExpression(nameof(path))] string? pathExpression = null)
+    {
+        ArgumentNullException.ThrowIfNull(condition);
+        ArgumentNullException.ThrowIfNull(requirement);
+        ArgumentNullException.ThrowIfNull(path);
+        ArgumentException.ThrowIfNullOrEmpty(message);
+
+        var name = MemberName.From(pathExpression, nameof(path));
+        return new ObjectSchema<T>(
+            _fields,
+            [.. _checks, new ConditionalRefineCheck<T>(condition, requirement, name, message)]);
+    }
+
+    /// <summary>
+    /// Requires something of the object, but only when a condition holds, reporting against the
+    /// object itself rather than a named property.
+    /// </summary>
+    /// <param name="condition">When this returns <see langword="true"/>, the requirement applies.</param>
+    /// <param name="requirement">What must then be true of the object.</param>
+    /// <param name="message">The message to report when the requirement is not met.</param>
+    public ObjectSchema<T> When(Func<T, bool> condition, Func<T, bool> requirement, string message)
+    {
+        ArgumentNullException.ThrowIfNull(condition);
+        ArgumentNullException.ThrowIfNull(requirement);
+        ArgumentException.ThrowIfNullOrEmpty(message);
+
+        return new ObjectSchema<T>(
+            _fields,
+            [.. _checks, new ConditionalRefineCheck<T>(condition, requirement, null, message)]);
+    }
+
+    /// <summary>
+    /// Applies a whole set of rules, but only when a condition holds.
+    /// </summary>
+    /// <param name="condition">When this returns <see langword="true"/>, the rules apply.</param>
+    /// <param name="rules">
+    /// Builds the rules from an empty schema for the same type. Fields validated here are validated
+    /// in addition to those declared outside the block.
+    /// </param>
+    /// <remarks>
+    /// This is the shape a real conditional usually has. A status reaching some value rarely
+    /// unlocks one requirement; it unlocks three, and writing them as three guarded predicates
+    /// restates the same condition three times and invites the copies to drift apart.
+    /// </remarks>
+    /// <example>
+    /// <code>
+    /// Theo.Object&lt;TaskItem&gt;()
+    ///     .Field(x =&gt; x.Status, Theo.Enum&lt;TaskStatus&gt;())
+    ///     .When(x =&gt; x.Status == TaskStatus.Completed, rules =&gt; rules
+    ///         .Field(x =&gt; x.CompletedAt, Theo.DateTime().RequireUtc().Required())
+    ///         .Field(x =&gt; x.ClosedBy, Theo.String().NotEmpty()));
+    /// </code>
+    /// </example>
+    public ObjectSchema<T> When(Func<T, bool> condition, Func<ObjectSchema<T>, ObjectSchema<T>> rules)
+    {
+        ArgumentNullException.ThrowIfNull(condition);
+        ArgumentNullException.ThrowIfNull(rules);
+
+        var inner = rules(new ObjectSchema<T>())
+            ?? throw new ArgumentException("The rules builder returned null.", nameof(rules));
+
+        return new ObjectSchema<T>(_fields, [.. _checks, new ConditionalSchemaCheck<T>(condition, inner)]);
+    }
+
     /// <inheritdoc />
     /// <remarks>
     /// Object-level refinements run only once every field has validated. A rule comparing two

@@ -72,6 +72,35 @@ deserializer will question, so an enum-typed value is not evidence that the valu
 it. `[Flags]` enums are validated by their bits, so `Read | Write` is accepted and an undeclared
 bit is not.
 
+**Conditional rules read as conditions.** A field that is optional in general but required once
+another field takes a particular value is the most common cross-field rule there is, and the usual
+way to express it — a single predicate over `!condition || requirement` — is a material implication
+spelled as a disjunction, which almost everyone misreads. Two predicates say what is meant:
+
+```csharp
+Theo.Object<TaskItem>()
+    .Field(x => x.Status, Theo.Enum<TaskStatus>())
+    .When(
+        x => x.Status == TaskStatus.Completed,
+        x => x.CompletedAt is not null,
+        x => x.CompletedAt,                       // the field the user has to fix
+        "A completion date is required once the task is completed.");
+```
+
+When one condition unlocks several requirements, which is what usually happens, they go in a block
+instead of restating the condition once per rule:
+
+```csharp
+    .When(x => x.Status == TaskStatus.Completed, rules => rules
+        .Field(x => x.CompletedAt, Theo.DateTime().RequireUtc().Required())
+        .Field(x => x.ClosedBy, Theo.String().NotEmpty().Required())
+        .Field(x => x.Resolution, Theo.String().MinLength(10).Required()));
+```
+
+Rules inside the block are ordinary rules, not presence checks: a `CompletedAt` that is present but
+local still fails `RequireUtc()`. `Required()` is the counterpart to `AllowNull()` — it gives a
+`DateTime?` property a schema that refuses the null.
+
 **Objects can be structs.** `Theo.Object<T>()` takes a class, a record, a struct or a record
 struct. A struct parses within noise of the equivalent class and neither allocates.
 

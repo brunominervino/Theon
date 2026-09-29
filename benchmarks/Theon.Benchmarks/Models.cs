@@ -40,3 +40,20 @@ public struct CreateUserValue
 
     public Guid CompanyId { get; set; }
 }
+
+public enum TicketStatus
+{
+    Open = 0,
+    Completed = 1,
+}
+
+public sealed class Ticket
+{
+    public string Title { get; set; } = string.Empty;
+
+    public TicketStatus Status { get; set; }
+
+    public DateTime? CompletedAt { get; set; }
+
+    public string? ClosedBy { get; set; }
+}

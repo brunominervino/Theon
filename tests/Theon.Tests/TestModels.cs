@@ -80,3 +80,32 @@ public sealed class Reading
 }
 
 public record struct Span(DateOnly Start, DateOnly End);
+
+public enum TaskStatus
+{
+    Pending = 0,
+    InProgress = 1,
+    Completed = 2,
+}
+
+public sealed class TaskItem
+{
+    public string Title { get; set; } = string.Empty;
+
+    public TaskStatus Status { get; set; }
+
+    public DateTime? CompletedAt { get; set; }
+}
+
+public sealed class Ticket
+{
+    public string Title { get; set; } = string.Empty;
+
+    public TaskStatus Status { get; set; }
+
+    public DateTime? CompletedAt { get; set; }
+
+    public string? ClosedBy { get; set; }
+
+    public string? Resolution { get; set; }
+}
