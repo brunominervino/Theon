@@ -72,6 +72,9 @@ deserializer will question, so an enum-typed value is not evidence that the valu
 it. `[Flags]` enums are validated by their bits, so `Read | Write` is accepted and an undeclared
 bit is not.
 
+**Objects can be structs.** `Theo.Object<T>()` takes a class, a record, a struct or a record
+struct. A struct parses within noise of the equivalent class and neither allocates.
+
 **Clock-dependent rules take a clock.** `InPast()` and `InFuture()` read a `TimeProvider`, so a
 test pins the instant instead of sleeping or racing midnight. `RequireUtc()` turns the
 `DateTimeKind` trap — where a local and a UTC value compare as if on the same clock and silently

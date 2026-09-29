@@ -40,6 +40,16 @@ public class ParsingBenchmarks
     private static readonly Schema<DateTime> Timestamp =
         Theo.DateTime().RequireUtc().Min(new DateTime(2000, 1, 1, 0, 0, 0, DateTimeKind.Utc));
 
+    // Same four fields as FlatObject, over a struct. An accessor is a Func<T, TValue>, so a
+    // struct is copied once per field read; this is what that costs.
+    private static readonly Schema<CreateUserValue> FlatStruct =
+        Theo.Object<CreateUserValue>()
+            .Field(x => x.Name, Theo.String().MinLength(3).MaxLength(100))
+            .Field(x => x.Email, Theo.String().Email())
+            .Field(x => x.Age, Theo.Int().Min(18).Max(120))
+            .Field(x => x.CompanyId, Theo.Guid().NotEmpty());
+
+    private CreateUserValue _validStruct;
     private string[] _emails = null!;
     private CreateUserRequest _valid = null!;
     private CreateUserRequest _firstFieldInvalid = null!;
@@ -58,6 +68,14 @@ public class ParsingBenchmarks
         };
 
         _emails = [.. Enumerable.Range(0, 20).Select(i => $"user{i}@example.com")];
+
+        _validStruct = new CreateUserValue
+        {
+            Name = "Ada Lovelace",
+            Email = "ada@example.com",
+            Age = 36,
+            CompanyId = Guid.NewGuid(),
+        };
 
         _firstFieldInvalid = new CreateUserRequest
         {
@@ -104,6 +122,9 @@ public class ParsingBenchmarks
 
     [Benchmark]
     public bool Object_IsValid_FailFast() => FlatObject.IsValid(_allFieldsInvalid);
+
+    [Benchmark]
+    public bool Object_FlatStruct_Valid() => FlatStruct.SafeParse(_validStruct).IsSuccess;
 
     [Benchmark]
     public bool Collection_20Emails_Valid() => EmailList.SafeParse(_emails).IsSuccess;

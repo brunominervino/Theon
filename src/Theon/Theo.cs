@@ -63,9 +63,9 @@ public static class Theo
     public static GuidSchema Guid() => new();
 
     /// <summary>Starts a schema for an object of type <typeparamref name="T"/>.</summary>
-    /// <typeparam name="T">The object type to validate.</typeparam>
+    /// <typeparam name="T">The object type to validate: a class, record, struct or record struct.</typeparam>
     public static ObjectSchema<T> Object<T>()
-        where T : class => new();
+        where T : notnull => new();
 
     /// <summary>Starts a schema for a list, applying <paramref name="element"/> to each entry.</summary>
     /// <typeparam name="TElement">The element type.</typeparam>

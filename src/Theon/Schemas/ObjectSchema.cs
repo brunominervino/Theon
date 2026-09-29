@@ -20,9 +20,22 @@ namespace Theon.Schemas;
 /// The object itself is never mutated. A rule that rewrites a value, such as <c>Trim</c>, affects
 /// the rules that follow it within that field, not the property on the instance.
 /// </para>
+/// <para>
+/// <typeparamref name="T"/> may be a class, a record, a struct or a record struct. Accepting
+/// <see langword="null"/> is offered as an extension method rather than a member, because the
+/// reference and value cases need different wrappers and a member cannot constrain the type
+/// parameter its own class declared.
+/// </para>
+/// <para>
+/// An accessor is a <see cref="Func{T, TResult}"/>, so a value type is copied once per field read.
+/// Measured against the same four fields, a struct and a class parse within noise of each other
+/// and neither allocates: validation work dominates the copy at any ordinary struct size. A
+/// deliberately large struct would not be free, and the benchmark to check that lives in
+/// <c>benchmarks/</c>.
+/// </para>
 /// </remarks>
 public sealed class ObjectSchema<T> : Schema<T>
-    where T : class
+    where T : notnull
 {
     private readonly FieldBinding<T>[] _fields;
     private readonly Check<T>[] _checks;
@@ -142,9 +155,6 @@ public sealed class ObjectSchema<T> : Schema<T>
         return new ObjectSchema<T>(_fields, [.. _checks, new PathedRefineCheck<T>(predicate, name, message)]);
     }
 
-    /// <summary>Accepts <see langword="null"/> in addition to everything this schema accepts.</summary>
-    public Schema<T?> AllowNull() => new NullableReferenceSchema<T>(this);
-
     /// <inheritdoc />
     /// <remarks>
     /// Object-level refinements run only once every field has validated. A rule comparing two
@@ -156,6 +166,7 @@ public sealed class ObjectSchema<T> : Schema<T>
     {
         var errorsBefore = context.ErrorCount;
 
+        // Always false for a value type, and the JIT removes the branch there entirely.
         if (input is null)
         {
             context.AddError(new ValidationErrorInfo
@@ -165,7 +176,7 @@ public sealed class ObjectSchema<T> : Schema<T>
                 Received = "null",
             });
 
-            output = null!;
+            output = default!;
             return false;
         }
 

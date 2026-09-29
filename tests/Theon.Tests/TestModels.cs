@@ -60,3 +60,23 @@ public sealed class Booking
 
     public DateTimeOffset CreatedAt { get; set; }
 }
+
+public struct Coordinates
+{
+    public double Latitude { get; set; }
+
+    public double Longitude { get; set; }
+}
+
+public record struct Money(decimal Amount, string Currency);
+
+public readonly record struct Temperature(double Celsius);
+
+public sealed class Reading
+{
+    public Coordinates Where { get; set; }
+
+    public Temperature? Value { get; set; }
+}
+
+public record struct Span(DateOnly Start, DateOnly End);

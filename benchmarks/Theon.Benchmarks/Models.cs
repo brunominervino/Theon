@@ -28,3 +28,15 @@ public enum UserStatus
     Active = 1,
     Suspended = 2,
 }
+
+/// <summary>The same four fields as <see cref="CreateUserRequest"/>, as a value type.</summary>
+public struct CreateUserValue
+{
+    public string Name { get; set; }
+
+    public string Email { get; set; }
+
+    public int Age { get; set; }
+
+    public Guid CompanyId { get; set; }
+}
