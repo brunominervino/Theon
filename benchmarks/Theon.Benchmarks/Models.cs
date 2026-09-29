@@ -21,3 +21,10 @@ public sealed class Address
 
     public string ZipCode { get; set; } = string.Empty;
 }
+
+public enum UserStatus
+{
+    Pending = 0,
+    Active = 1,
+    Suspended = 2,
+}

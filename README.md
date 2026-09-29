@@ -14,7 +14,10 @@ private static readonly Schema<CreateUserRequest> UserSchema =
         .Field(x => x.Name, Theo.String().Trim().MinLength(3).MaxLength(100))
         .Field(x => x.Email, Theo.String().Trim().ToLowerInvariant().Email())
         .Field(x => x.Age, Theo.Int().Min(18).Max(120))
-        .Field(x => x.CompanyId, Theo.Guid().NotEmpty());
+        .Field(x => x.CompanyId, Theo.Guid().NotEmpty())
+        .Field(x => x.Status, Theo.Enum<UserStatus>())
+        .Field(x => x.Tags, Theo.Collection(Theo.String().NotEmpty()).MaxCount(10))
+        .Field(x => x.CreatedAt, Theo.DateTime().RequireUtc().InPast());
 
 var result = UserSchema.SafeParse(request);
 
@@ -46,8 +49,10 @@ something actually fails.
 |---|---:|---:|
 | `Theo.String().MinLength(3).MaxLength(100)` | 19 ns | 0 B |
 | Flat object, four fields, valid | 170 ns | 0 B |
-| Nested object, seven fields, valid | 274 ns | 0 B |
-| Flat object, four fields, all invalid | 503 ns | 872 B |
+| Nested object, seven fields, valid | 264 ns | 0 B |
+| Enum, checked against its declared members | 14 ns | 0 B |
+| List of 20 e-mail addresses, valid | 2,599 ns | 0 B |
+| Flat object, four fields, all invalid | 497 ns | 872 B |
 
 <sub>net10.0, x64. Reproduce with the benchmark command below; absolute numbers will differ by machine.</sub>
 
@@ -61,6 +66,16 @@ points, so one emoji is one character rather than two.
 **One numeric schema covers every numeric type**, through generic math, rather than one
 hand-written schema per type. Non-finite values are rejected before any bound is considered, so a
 `NaN` cannot slip past a range check that compares false in both directions.
+
+**Enums are actually checked.** `(UserStatus)999` is a legal cast that no compiler will stop and no
+deserializer will question, so an enum-typed value is not evidence that the value is a member of
+it. `[Flags]` enums are validated by their bits, so `Read | Write` is accepted and an undeclared
+bit is not.
+
+**Clock-dependent rules take a clock.** `InPast()` and `InFuture()` read a `TimeProvider`, so a
+test pins the instant instead of sleeping or racing midnight. `RequireUtc()` turns the
+`DateTimeKind` trap — where a local and a UTC value compare as if on the same clock and silently
+disagree by the machine's offset — into a validation failure at the boundary.
 
 ## Installing
 

@@ -48,3 +48,15 @@ public sealed class Node
 
     public string Value { get; set; } = string.Empty;
 }
+
+public sealed class Mailing
+{
+    public IReadOnlyList<string> Recipients { get; set; } = [];
+}
+
+public sealed class Booking
+{
+    public DateTime CheckIn { get; set; }
+
+    public DateTimeOffset CreatedAt { get; set; }
+}

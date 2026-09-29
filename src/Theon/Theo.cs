@@ -66,4 +66,48 @@ public static class Theo
     /// <typeparam name="T">The object type to validate.</typeparam>
     public static ObjectSchema<T> Object<T>()
         where T : class => new();
+
+    /// <summary>Starts a schema for a list, applying <paramref name="element"/> to each entry.</summary>
+    /// <typeparam name="TElement">The element type.</typeparam>
+    /// <param name="element">The schema every element must satisfy.</param>
+    /// <example>
+    /// <code>
+    /// Theo.Collection(Theo.String().Email()).MinCount(1).MaxCount(10);
+    /// </code>
+    /// </example>
+    public static CollectionSchema<TElement> Collection<TElement>(Schema<TElement, TElement> element)
+    {
+        ArgumentNullException.ThrowIfNull(element);
+        return new CollectionSchema<TElement>(element);
+    }
+
+    /// <summary>Starts a schema for an enum, rejecting values the type does not declare.</summary>
+    /// <typeparam name="TEnum">The enum type.</typeparam>
+    /// <remarks>
+    /// Worth more than it looks: <c>(TEnum)999</c> is a legal cast, so an enum-typed value is not
+    /// evidence that the value is one of the members.
+    /// </remarks>
+    public static EnumSchema<TEnum> Enum<TEnum>()
+        where TEnum : struct, System.Enum => new();
+
+    /// <summary>Starts a schema for a <see cref="System.DateTime"/>.</summary>
+    /// <param name="timeProvider">
+    /// The clock used by <c>InPast</c> and <c>InFuture</c>. Defaults to
+    /// <see cref="TimeProvider.System"/>; pass a fake one in tests.
+    /// </param>
+    public static DateTimeSchema DateTime(TimeProvider? timeProvider = null) =>
+        new(timeProvider ?? TimeProvider.System);
+
+    /// <summary>Starts a schema for a <see cref="System.DateTimeOffset"/>.</summary>
+    /// <param name="timeProvider">The clock used by <c>InPast</c> and <c>InFuture</c>.</param>
+    public static DateTimeOffsetSchema DateTimeOffset(TimeProvider? timeProvider = null) =>
+        new(timeProvider ?? TimeProvider.System);
+
+    /// <summary>Starts a schema for a <see cref="System.DateOnly"/>.</summary>
+    /// <param name="timeProvider">The clock used by <c>InPast</c> and <c>InFuture</c>.</param>
+    public static DateOnlySchema DateOnly(TimeProvider? timeProvider = null) =>
+        new(timeProvider ?? TimeProvider.System);
+
+    /// <summary>Starts a schema for a <see cref="System.TimeOnly"/>.</summary>
+    public static TimeOnlySchema TimeOnly() => new(TimeProvider.System);
 }

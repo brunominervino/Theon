@@ -32,6 +32,15 @@ public class ParsingBenchmarks
                 .Field(a => a.City, Theo.String().MinLength(2))
                 .Field(a => a.ZipCode, Theo.String().Length(8)));
 
+    private static readonly Schema<IReadOnlyList<string>> EmailList =
+        Theo.Collection(Theo.String().Email()).MinCount(1).MaxCount(100);
+
+    private static readonly Schema<UserStatus> Status = Theo.Enum<UserStatus>();
+
+    private static readonly Schema<DateTime> Timestamp =
+        Theo.DateTime().RequireUtc().Min(new DateTime(2000, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+
+    private string[] _emails = null!;
     private CreateUserRequest _valid = null!;
     private CreateUserRequest _firstFieldInvalid = null!;
     private CreateUserRequest _allFieldsInvalid = null!;
@@ -47,6 +56,8 @@ public class ParsingBenchmarks
             CompanyId = Guid.NewGuid(),
             Address = new Address { Street = "Main Street", City = "London", ZipCode = "12345678" },
         };
+
+        _emails = [.. Enumerable.Range(0, 20).Select(i => $"user{i}@example.com")];
 
         _firstFieldInvalid = new CreateUserRequest
         {
@@ -93,4 +104,14 @@ public class ParsingBenchmarks
 
     [Benchmark]
     public bool Object_IsValid_FailFast() => FlatObject.IsValid(_allFieldsInvalid);
+
+    [Benchmark]
+    public bool Collection_20Emails_Valid() => EmailList.SafeParse(_emails).IsSuccess;
+
+    [Benchmark]
+    public bool Enum_Valid() => Status.SafeParse(UserStatus.Active).IsSuccess;
+
+    [Benchmark]
+    public bool DateTime_Valid() =>
+        Timestamp.SafeParse(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)).IsSuccess;
 }

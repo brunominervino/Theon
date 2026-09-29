@@ -12,6 +12,7 @@
 
   <ItemGroup>
     <!-- xunit.v3 ships Microsoft.Testing.Platform itself; VSTest packages are not needed. -->
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
     <PackageReference Include="xunit.v3" />
   </ItemGroup>
 
