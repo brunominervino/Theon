@@ -47,6 +47,13 @@
       change against it. There is no published version yet, so only the former is active today.
     -->
     <EnablePackageValidation>true</EnablePackageValidation>
+    <!--
+      Compares the public API against this published version and fails the build on anything that
+      breaks binary compatibility with it. Raise it to the newest release as part of releasing, so
+      each version is checked against the one before it rather than against an ever more distant
+      ancestor.
+    -->
+    <PackageValidationBaselineVersion>0.1.0-preview.4</PackageValidationBaselineVersion>
   </PropertyGroup>
 
   <ItemGroup>

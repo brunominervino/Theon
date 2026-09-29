@@ -65,13 +65,18 @@ make it into the package, and most of the discoverability this library is design
 
 ## API compatibility
 
-`EnablePackageValidation` is on. Today it checks the package is internally consistent across target
-frameworks. Once a version has been published, set `PackageValidationBaselineVersion` to it in
-`src/Directory.Build.props`, and the build will then fail on any change that breaks binary
-compatibility against that release.
+`EnablePackageValidation` is on, and `PackageValidationBaselineVersion` names the last published
+release. Packing downloads that package and compares the public API against it, failing the build
+on anything that breaks binary compatibility — a removed member, a narrowed accessibility, a
+changed signature.
 
-Do that with the first published version. It is the cheapest guard available against accidentally
-shipping a breaking change, and it only works if somebody remembers to turn it on.
+Raise the baseline as part of releasing, alongside `VersionSuffix`. Each version is then checked
+against the one immediately before it, rather than against an ever more distant ancestor that
+eventually makes every legitimate change look like a break.
+
+It is worth confirming the check is live rather than trusting that it is, because a silently
+skipped validation looks exactly like a passing one. Make a public member `internal`, pack, and
+expect `CP0002`; then put it back.
 
 ## The package id
 
