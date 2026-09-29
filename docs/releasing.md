@@ -20,7 +20,7 @@ written. Packing produces a prerelease unless told otherwise:
 
 | Command | Version produced |
 |---|---|
-| `dotnet pack ... -c Release` | `0.1.0-preview.1` |
+| `dotnet pack ... -c Release` | `0.1.0-preview.5` |
 | `dotnet pack ... -c Release -p:VersionSuffix=` | `0.1.0` |
 | `dotnet pack ... -c Release -p:VersionSuffix=rc.1` | `0.1.0-rc.1` |
 | `dotnet pack ... -c Release -p:Version=0.2.0` | `0.2.0`, overriding both |
@@ -56,7 +56,7 @@ Add a `nuget.config` pointing at the local output:
 Then install it, write a few lines against the public API, and run them:
 
 ```bash
-dotnet add package Theon --version 0.1.0-preview.1
+dotnet add package Theon --version 0.1.0-preview.5
 dotnet run
 ```
 
@@ -114,6 +114,16 @@ The policy on nuget.org must match the workflow exactly:
 
 `Theon*` rather than `*`, so this repository can publish the package and its future satellites and
 nothing else in the account.
+
+### Keeping the version in one place
+
+`VersionSuffix` in `src/Directory.Build.props` is what an empty Version field publishes, so it has
+to name the **next** version, not the last one. Bump it in its own commit as part of releasing.
+
+Typing the version into the workflow field instead works, and is the right escape hatch for
+republishing or for cutting an `rc` out of sequence. It is not the routine path: the file then
+records a version that has already shipped, and nobody reading the repository can tell what comes
+next. That drift is what left the file claiming `preview.1` while `preview.4` was live.
 
 The GitHub side needs an environment named `nuget` with at least one required reviewer. That is
 what makes the job wait for a person, and nuget.org independently verifies the environment claim,

@@ -1,5 +1,10 @@
 # Theon
 
+[![NuGet](https://img.shields.io/nuget/vpre/Theon?logo=nuget&label=NuGet)](https://www.nuget.org/packages/Theon)
+[![Downloads](https://img.shields.io/nuget/dt/Theon?logo=nuget&label=downloads)](https://www.nuget.org/packages/Theon)
+[![CI](https://github.com/brunominervino/Theon/actions/workflows/ci.yml/badge.svg)](https://github.com/brunominervino/Theon/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+
 Strongly typed, fluent schema definition, parsing and validation for .NET.
 
 Zero dependencies. Native AOT friendly. A valid value parses without allocating.
@@ -111,7 +116,13 @@ disagree by the machine's offset — into a validation failure at the boundary.
 
 ## Installing
 
-Not yet published to NuGet.
+```bash
+dotnet add package Theon --prerelease
+```
+
+The `--prerelease` flag is not optional: every release so far is a preview, and NuGet will not
+install one unless asked. That is the point of shipping previews — the public API is still moving,
+and a stable version number is a promise this library is not ready to make.
 
 ## Building
 
