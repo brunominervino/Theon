@@ -13,11 +13,8 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <!--
-      The first release of this package has no predecessor to compare against. Point it at the
-      previous version once one exists, the same way the core package does.
-    -->
-    <PackageValidationBaselineVersion></PackageValidationBaselineVersion>
+    <!-- Raised with each release, alongside the core package's own baseline. -->
+    <PackageValidationBaselineVersion>0.1.0-preview.5</PackageValidationBaselineVersion>
   </PropertyGroup>
 
   <ItemGroup>

@@ -2,43 +2,13 @@
 <!--
   Deliberate breaks against the baseline release, and the reason each is acceptable.
 
-  AllowNull was generalised from ObjectSchema<T> to Schema<T>, which retired the two extension
-  classes that only served object schemas. Source code is unaffected: a call written as
-  `schema.AllowNull()` resolves to the new class. Only code that named the old class explicitly —
-  which is not how extension methods are used — would break, and the package is a 0.x prerelease,
-  where semantic versioning allows exactly this.
+  Empty: there is nothing suppressed against 0.1.0-preview.5.
 
-  These entries are scoped to the baseline they were generated against. Clear this file whenever
-  PackageValidationBaselineVersion is raised: keeping a stale suppression means the next genuine
-  break in one of these types passes unnoticed.
+  Entries here are scoped to the baseline they were generated against, so this file is cleared
+  whenever PackageValidationBaselineVersion is raised. A stale suppression silently permits the
+  next genuine break in the same type.
+
+  To record an intended break: pack with -p:ApiCompatGenerateSuppressionFile=true, then write down
+  next to each entry why it is acceptable.
 -->
-<Suppressions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
-  <Suppression>
-    <DiagnosticId>CP0001</DiagnosticId>
-    <Target>T:Theon.ReferenceObjectSchemaExtensions</Target>
-    <Left>lib/net10.0/Theon.dll</Left>
-    <Right>lib/net10.0/Theon.dll</Right>
-    <IsBaselineSuppression>true</IsBaselineSuppression>
-  </Suppression>
-  <Suppression>
-    <DiagnosticId>CP0001</DiagnosticId>
-    <Target>T:Theon.ValueObjectSchemaExtensions</Target>
-    <Left>lib/net10.0/Theon.dll</Left>
-    <Right>lib/net10.0/Theon.dll</Right>
-    <IsBaselineSuppression>true</IsBaselineSuppression>
-  </Suppression>
-  <Suppression>
-    <DiagnosticId>CP0001</DiagnosticId>
-    <Target>T:Theon.ReferenceObjectSchemaExtensions</Target>
-    <Left>lib/net8.0/Theon.dll</Left>
-    <Right>lib/net8.0/Theon.dll</Right>
-    <IsBaselineSuppression>true</IsBaselineSuppression>
-  </Suppression>
-  <Suppression>
-    <DiagnosticId>CP0001</DiagnosticId>
-    <Target>T:Theon.ValueObjectSchemaExtensions</Target>
-    <Left>lib/net8.0/Theon.dll</Left>
-    <Right>lib/net8.0/Theon.dll</Right>
-    <IsBaselineSuppression>true</IsBaselineSuppression>
-  </Suppression>
-</Suppressions>
+<Suppressions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" />
