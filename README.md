@@ -150,7 +150,13 @@ disagree by the machine's offset — into a validation failure at the boundary.
 
 ```bash
 dotnet add package Theon --prerelease
+dotnet add package Theon.AspNetCore --prerelease   # optional, for ASP.NET Core
 ```
+
+`Theon.AspNetCore` is a separate package so the core keeps its promise of no dependencies: a worker
+service or a console app validating payloads should not drag ASP.NET Core in behind it. The two
+version in lockstep, so there is never a question of which release of one works with which release
+of the other.
 
 The `--prerelease` flag is not optional: every release so far is a preview, and NuGet will not
 install one unless asked. That is the point of shipping previews — the public API is still moving,
@@ -181,6 +187,38 @@ dotnet pack src/Theon/Theon.csproj -c Release
 
 The package is produced under `artifacts/package/release/`, as a prerelease by default. See
 [`docs/releasing.md`](docs/releasing.md) for versions, verification, and publishing.
+
+## ASP.NET Core
+
+```csharp
+private static readonly Schema<CreateUser> CreateUserSchema =
+    Theo.Object<CreateUser>()
+        .Field(x => x.Email, Theo.String().Trim().Email())
+        .Field(x => x.Age, Theo.Int().Min(18));
+
+app.MapPost("/users", (CreateUser request) => Results.Ok())
+   .Validate(CreateUserSchema);
+```
+
+A failure answers 400 with `ValidationProblemDetails`, keyed by rendered path, and the handler is
+never called:
+
+```json
+{
+  "status": 400,
+  "errors": {
+    "Email": ["Invalid e-mail address."],
+    "Age": ["Must be greater than or equal to 18."]
+  }
+}
+```
+
+The schema is named at the endpoint rather than discovered from the container. Both work; this one
+puts the rule where the endpoint is declared, so a reader sees what it accepts and what it requires
+in the same three lines — and the compiler checks the schema matches the type the handler takes.
+
+Validation runs asynchronously, so a schema with a `RefineAsync` rule works here with no extra
+ceremony, and the request's cancellation token reaches it.
 
 ## Design
 

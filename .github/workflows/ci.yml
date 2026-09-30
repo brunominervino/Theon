@@ -38,9 +38,9 @@ jobs:
         run: dotnet build Theon.slnx -c Release --no-restore
 
       # Tests run through the MSBuild Test target rather than `dotnet test`.
-      # See AGENTS.md for why.
+      # See AGENTS.md for why. eng/Tests.proj gathers every test project.
       - name: Test
-        run: dotnet build tests/Theon.Tests/Theon.Tests.csproj -c Release --no-restore -t:Test
+        run: dotnet build eng/Tests.proj -c Release
 
   format:
     name: format

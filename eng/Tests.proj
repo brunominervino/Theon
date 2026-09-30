@@ -1,0 +1,21 @@
+<Project DefaultTargets="Test">
+
+  <!--
+    Runs every test project. The Test target exists only on test projects, so invoking it on the
+    solution fails on the library ones; this gathers the test projects by convention instead, and
+    a new one is picked up by existing.
+  -->
+
+  <ItemGroup>
+    <TestProject Include="$(MSBuildThisFileDirectory)../tests/**/*.Tests.csproj" />
+  </ItemGroup>
+
+  <Target Name="Test">
+    <Message Importance="High" Text="Testing: @(TestProject->'%(Filename)', ', ')" />
+    <MSBuild Projects="@(TestProject)"
+             Targets="Test"
+             Properties="Configuration=$(Configuration)"
+             BuildInParallel="false" />
+  </Target>
+
+</Project>

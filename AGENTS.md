@@ -19,13 +19,14 @@ integrations.
 ```bash
 dotnet restore Theon.slnx
 dotnet build Theon.slnx -c Release
-dotnet build tests/Theon.Tests/Theon.Tests.csproj -c Release -t:Test
+dotnet build eng/Tests.proj -c Release
 dotnet format Theon.slnx --verify-no-changes
 ./artifacts/bin/Theon.Benchmarks/release/Theon.Benchmarks.exe --filter "*" --job short --memory
-dotnet pack src/Theon/Theon.csproj -c Release
+dotnet pack Theon.slnx -c Release
 ```
 
-Tests run through the MSBuild `Test` target, not `dotnet test`. The .NET 10 SDK removed the VSTest
+Tests run through the MSBuild `Test` target, not `dotnet test`, and `eng/Tests.proj` gathers every
+test project so a new one is picked up by existing. The .NET 10 SDK removed the VSTest
 entry point, and the replacement `dotnet test` runner does not complete its handshake with the
 Microsoft.Testing.Platform version xunit.v3 ships. The `Test` target runs the test host directly and
 covers both target frameworks. If you find `dotnet test` working on a later SDK, change this file in

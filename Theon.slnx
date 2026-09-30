@@ -6,9 +6,11 @@
     <Project Path="samples/Theon.Sample/Theon.Sample.csproj" />
   </Folder>
   <Folder Name="/src/">
+    <Project Path="src/Theon.AspNetCore/Theon.AspNetCore.csproj" />
     <Project Path="src/Theon/Theon.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/Theon.AspNetCore.Tests/Theon.AspNetCore.Tests.csproj" />
     <Project Path="tests/Theon.Tests/Theon.Tests.csproj" />
   </Folder>
 </Solution>

@@ -52,7 +52,7 @@ jobs:
         run: dotnet build Theon.slnx -c Release --no-restore
 
       - name: Test
-        run: dotnet build tests/Theon.Tests/Theon.Tests.csproj -c Release --no-restore -t:Test
+        run: dotnet build eng/Tests.proj -c Release
 
       - name: Verify formatting
         run: dotnet format Theon.slnx --verify-no-changes --severity warn
@@ -94,10 +94,12 @@ jobs:
           # the workflow, click Run, fill nothing in — published a stable version. Publishing a
           # stable version is the least reversible thing this workflow can do, so it must not be
           # what happens by default.
+          # Packs every packable project under src/, so a new satellite package ships by
+          # existing rather than by remembering to add a line here. They version in lockstep.
           if [ -n "${{ inputs.version }}" ]; then
-            dotnet pack src/Theon/Theon.csproj -c Release -p:Version='${{ inputs.version }}'
+            dotnet pack Theon.slnx -c Release -p:Version='${{ inputs.version }}'
           else
-            dotnet pack src/Theon/Theon.csproj -c Release
+            dotnet pack Theon.slnx -c Release
           fi
 
       - name: Show what would be published
