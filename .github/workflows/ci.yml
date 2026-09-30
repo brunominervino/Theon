@@ -9,6 +9,14 @@ on:
 permissions:
   contents: read
 
+# Actions are pinned to a major version, which is the most current one for each. They were on v4
+# until the runners began forcing Node 20 actions onto Node 24 and warning about it; every version
+# here declares node24 in its own action.yml, which is what removes the warning rather than silences
+# it. NuGet/login is already on node24 and needs nothing.
+#
+# The breaking changes across those majors do not reach this repository: checkout v6 changed a default
+# for pull_request_target, which nothing here uses, and upload-artifact v6 raised the minimum runner
+# version, which matters only to self-hosted runners.
 env:
   DOTNET_NOLOGO: true
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
@@ -25,9 +33,9 @@ jobs:
         os: [ubuntu-latest, windows-latest]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
 
@@ -47,9 +55,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
 
@@ -61,9 +69,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
 
@@ -77,9 +85,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
 
