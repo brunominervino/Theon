@@ -92,4 +92,267 @@ public class StringFormatTests
 
         Assert.Equal("Too short, sorry.", Assert.Single(result.Errors).Message);
     }
+
+    // Every format pattern is anchored \A..\z rather than ^..$, because in .NET $ also matches
+    // immediately before one trailing newline. With ^..$ these all passed, which is how a line
+    // break survives the one rule whose job is to reject it.
+    [Theory]
+    [InlineData("user@example.com\n")]
+    [InlineData("https://example.com\n")]
+    [InlineData("6f0d6e0a-1b2c-4d5e-8f90-a1b2c3d4e5f6\n")]
+    [InlineData("+5511987654321\n")]
+    public void A_Trailing_Newline_Does_Not_Slip_Past_An_Anchor(string value)
+    {
+        Assert.False(Theo.String().Email().IsValid(value));
+        Assert.False(Theo.String().Url().IsValid(value));
+        Assert.False(Theo.String().Uuid().IsValid(value));
+        Assert.False(Theo.String().E164().IsValid(value));
+    }
+
+    [Theory]
+    [InlineData("https://example.com")]
+    [InlineData("http://example.com")]
+    [InlineData("https://example.com/")]
+    [InlineData("https://www.example.co.uk/a/b?q=1&r=2#frag")]
+    [InlineData("https://example.com:8443/x")]
+    [InlineData("https://sub.domain.example.com")]
+    [InlineData("https://192.168.0.1/admin")]
+    [InlineData("https://example.com/a%20b")]
+    [InlineData("http://localhost")]
+    [InlineData("http://localhost:5000")]
+    public void Url_Accepts_Ordinary_Addresses(string value) =>
+        Assert.True(Theo.String().Url().IsValid(value));
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("example.com")]
+    [InlineData("https://")]
+    [InlineData("//example.com")]
+    [InlineData("http://exa mple.com")]
+    [InlineData("http://-bad.com")]
+    [InlineData("https://exa_mple.com")]
+    [InlineData("https://example.com:123456/x")]
+    public void Url_Rejects_Malformed_Addresses(string value) =>
+        Assert.False(Theo.String().Url().IsValid(value));
+
+    // Not oversights: a scheme that executes, and credentials nobody meant to type. Both are legal
+    // URLs and neither belongs in a field labelled "website".
+    [Theory]
+    [InlineData("javascript:alert(1)")]
+    [InlineData("data:text/html;base64,PHNjcmlwdD4=")]
+    [InlineData("ftp://example.com")]
+    [InlineData("https://user:pass@example.com")]
+    public void Url_Refuses_What_A_Specification_Would_Allow(string value) =>
+        Assert.False(Theo.String().Url().IsValid(value));
+
+    [Fact]
+    public void Url_Reports_The_Format_Name()
+    {
+        var result = Theo.String().Url().SafeParse("nope");
+
+        var error = Assert.Single(result.Errors);
+        Assert.Equal(ValidationErrorCode.InvalidFormat, error.Code);
+        Assert.Equal("url", error.Format);
+        Assert.Equal("Invalid web address.", error.Message);
+    }
+
+    [Theory]
+    [InlineData("6f0d6e0a-1b2c-4d5e-8f90-a1b2c3d4e5f6")]
+    [InlineData("6F0D6E0A-1B2C-4D5E-8F90-A1B2C3D4E5F6")]
+    [InlineData("6f0d6E0a-1B2c-4d5E-8f90-A1b2C3d4E5f6")]
+    public void Uuid_Accepts_The_Canonical_Form(string value) =>
+        Assert.True(Theo.String().Uuid().IsValid(value));
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("6f0d6e0a1b2c4d5e8f90a1b2c3d4e5f6")]
+    [InlineData("{6f0d6e0a-1b2c-4d5e-8f90-a1b2c3d4e5f6}")]
+    [InlineData("6f0d6e0a-1b2c-4d5e-8f90-a1b2c3d4e5f")]
+    [InlineData("6f0d6e0a-1b2c-4d5e-8f90-a1b2c3d4e5f6g")]
+    [InlineData("6f0d6e0a_1b2c_4d5e_8f90_a1b2c3d4e5f6")]
+    [InlineData("6f0d6e0a-1b2c-4d5e-8f90a1b2c3d4e5f6")]
+    public void Uuid_Rejects_Anything_Else(string value) =>
+        Assert.False(Theo.String().Uuid().IsValid(value));
+
+    // The version and variant digits are not constrained, so Guid.Empty round-trips and a UUIDv7
+    // is not rejected for being newer than the rule. A mistyped identifier comes out the wrong
+    // length, not the wrong version.
+    [Fact]
+    public void Uuid_Does_Not_Police_The_Version()
+    {
+        Assert.True(Theo.String().Uuid().IsValid(System.Guid.Empty.ToString()));
+        Assert.True(Theo.String().Uuid().IsValid("0195f4a8-7b3c-7000-8000-0123456789ab"));
+        Assert.True(Theo.String().Uuid().IsValid("ffffffff-ffff-ffff-ffff-ffffffffffff"));
+    }
+
+    [Theory]
+    [InlineData("QQ==")]
+    [InlineData("QUJD")]
+    [InlineData("QUJDRA==")]
+    [InlineData("QUJDRUY=")]
+    [InlineData("a+b/c8==")]
+    public void Base64_Accepts_Padded_Standard_Alphabet(string value) =>
+        Assert.True(Theo.String().Base64().IsValid(value));
+
+    [Theory]
+    [InlineData("QQ=")]
+    [InlineData("QQ===")]
+    [InlineData("A")]
+    [InlineData("****")]
+    [InlineData("QUJ-")]
+    [InlineData("=QQ=")]
+    [InlineData("QQ== ")]
+    public void Base64_Rejects_Bad_Padding_And_Foreign_Characters(string value) =>
+        Assert.False(Theo.String().Base64().IsValid(value));
+
+    // The empty string is the encoding of the empty byte array and round-trips as one, so it is
+    // valid base64. Requiring a value is a separate rule, and says so.
+    [Fact]
+    public void Base64_Accepts_The_Empty_String_And_NotEmpty_Composes()
+    {
+        Assert.True(Theo.String().Base64().IsValid(""));
+        Assert.False(Theo.String().Base64().NotEmpty().IsValid(""));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("QQ")]
+    [InlineData("QUJ")]
+    [InlineData("QUJD")]
+    [InlineData("-_-_")]
+    [InlineData("eyJhbGciOiJIUzI1NiJ9")]
+    public void Base64Url_Accepts_The_UrlSafe_Alphabet(string value) =>
+        Assert.True(Theo.String().Base64Url().IsValid(value));
+
+    // Padding is refused rather than tolerated: a JSON web token, a URL segment and a filename all
+    // omit it, so a padded value came from the wrong encoder.
+    [Theory]
+    [InlineData("Q")]
+    [InlineData("QQ==")]
+    [InlineData("QU+D")]
+    [InlineData("QU/D")]
+    [InlineData("QUJDQ")]
+    public void Base64Url_Rejects_Padding_And_The_Standard_Alphabet(string value) =>
+        Assert.False(Theo.String().Base64Url().IsValid(value));
+
+    [Theory]
+    [InlineData("0")]
+    [InlineData("deadBEEF")]
+    [InlineData("0123456789abcdefABCDEF")]
+    public void Hex_Accepts_Hexadecimal_Digits(string value) =>
+        Assert.True(Theo.String().Hex().IsValid(value));
+
+    // Unlike base64, the empty string is rejected: no encoder emits it for anything, so it is
+    // always an absent value wearing the wrong error.
+    [Theory]
+    [InlineData("")]
+    [InlineData("0x1f")]
+    [InlineData("gg")]
+    [InlineData("de ad")]
+    public void Hex_Rejects_Anything_Else(string value) =>
+        Assert.False(Theo.String().Hex().IsValid(value));
+
+    [Fact]
+    public void Hex_Composes_With_Length_To_Pin_A_Digest()
+    {
+        var sha256 = Theo.String().Hex().Length(64);
+
+        Assert.True(sha256.IsValid(new string('a', 64)));
+        Assert.False(sha256.IsValid(new string('a', 63)));
+    }
+
+    [Theory]
+    [InlineData("+5511987654321")]
+    [InlineData("+12125551234")]
+    [InlineData("+441632960961")]
+    [InlineData("+551198765432109")]
+    public void E164_Accepts_Interchange_Form(string value) =>
+        Assert.True(Theo.String().E164().IsValid(value));
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("5511987654321")]
+    [InlineData("+05511987654321")]
+    [InlineData("+1")]
+    [InlineData("+5511987654321098")]
+    [InlineData("+55 11 98765-4321")]
+    [InlineData("(11) 98765-4321")]
+    [InlineData("++5511987654321")]
+    public void E164_Rejects_Presentation_Form(string value) =>
+        Assert.False(Theo.String().E164().IsValid(value));
+
+    [Fact]
+    public void E164_Reports_A_Message_A_Person_Can_Read()
+    {
+        var result = Theo.String().E164().SafeParse("(11) 98765-4321");
+
+        var error = Assert.Single(result.Errors);
+        Assert.Equal("e164", error.Format);
+        Assert.Equal("Invalid phone number.", error.Message);
+    }
+
+    [Theory]
+    [InlineData("2026-09-30T14:30:00Z")]
+    [InlineData("2026-09-30T14:30:00")]
+    [InlineData("2026-09-30T14:30")]
+    [InlineData("2026-09-30T14:30:00.123Z")]
+    [InlineData("2026-09-30T14:30:00.1234567+03:00")]
+    [InlineData("2026-09-30T14:30:00-05:00")]
+    [InlineData("2026-09-30T14:30:00+0300")]
+    public void Iso8601_Accepts_The_Forms_Dotnet_Writes(string value) =>
+        Assert.True(Theo.String().Iso8601().IsValid(value));
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("2026-09-30")]
+    [InlineData("09/30/2026")]
+    [InlineData("2026-09-30T25:30:00Z")]
+    [InlineData("2026-13-01T14:30:00Z")]
+    [InlineData("2026-09-30T14:30:00 ")]
+    public void Iso8601_Rejects_Other_Shapes(string value) =>
+        Assert.False(Theo.String().Iso8601().IsValid(value));
+
+    // A space where the T belongs is a different serialization, not a typo, so it is refused
+    // rather than quietly accepted.
+    [Fact]
+    public void Iso8601_Refuses_A_Space_Separator() =>
+        Assert.False(Theo.String().Iso8601().IsValid("2026-09-30 14:30:00"));
+
+    // The edge case that decided the implementation. A regular expression can describe the shape
+    // of a date and cannot tell February from the number 31, so this rule parses instead.
+    [Theory]
+    [InlineData("2026-02-31")]
+    [InlineData("2026-04-31")]
+    [InlineData("2027-02-29")]
+    [InlineData("2026-06-00")]
+    public void Iso8601Date_Checks_The_Calendar_Not_Just_The_Shape(string value) =>
+        Assert.False(Theo.String().Iso8601Date().IsValid(value));
+
+    [Theory]
+    [InlineData("2026-09-30")]
+    [InlineData("2028-02-29")]
+    [InlineData("0001-01-01")]
+    public void Iso8601Date_Accepts_Dates_That_Exist(string value) =>
+        Assert.True(Theo.String().Iso8601Date().IsValid(value));
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("2026-9-30")]
+    [InlineData("26-09-30")]
+    [InlineData("2026/09/30")]
+    [InlineData("2026-09-30T00:00:00Z")]
+    public void Iso8601Date_Rejects_Other_Shapes(string value) =>
+        Assert.False(Theo.String().Iso8601Date().IsValid(value));
+
+    [Fact]
+    public void Iso8601_Reports_Its_Format_Names()
+    {
+        var dateTime = Theo.String().Iso8601().SafeParse("nope");
+        var date = Theo.String().Iso8601Date().SafeParse("nope");
+
+        Assert.Equal("iso8601", Assert.Single(dateTime.Errors).Format);
+        Assert.Equal("Invalid date and time.", Assert.Single(dateTime.Errors).Message);
+        Assert.Equal("iso8601_date", Assert.Single(date.Errors).Format);
+        Assert.Equal("Invalid date.", Assert.Single(date.Errors).Message);
+    }
 }

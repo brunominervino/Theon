@@ -52,6 +52,7 @@ public static class ValidationEndpointExtensions
 
         return builder
             .AddEndpointFilter(new ValidationEndpointFilter<T>(schema))
+            .WithMetadata(Describe(schema))
             .ProducesValidationProblem();
     }
 
@@ -72,6 +73,13 @@ public static class ValidationEndpointExtensions
         ArgumentNullException.ThrowIfNull(schema);
 
         builder.AddEndpointFilter(new ValidationEndpointFilter<T>(schema));
+        builder.WithMetadata(Describe(schema));
         return builder;
     }
+
+    // The document is not produced here. A description is generated at most once, by whatever asks for
+    // it, and an application that never produces one should not pay for every endpoint having a schema.
+    private static TheonSchemaMetadata Describe<T>(Schema<T> schema)
+        where T : notnull =>
+        new(typeof(T), options => schema.ToJsonSchemaDocument(options));
 }

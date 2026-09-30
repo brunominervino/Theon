@@ -7,11 +7,18 @@
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/Theon.AspNetCore/Theon.AspNetCore.csproj" />
+    <Project Path="src/Theon.Localization.De/Theon.Localization.De.csproj" />
+    <Project Path="src/Theon.Localization.Es/Theon.Localization.Es.csproj" />
+    <Project Path="src/Theon.Localization.Fr/Theon.Localization.Fr.csproj" />
+    <Project Path="src/Theon.Localization.It/Theon.Localization.It.csproj" />
+    <Project Path="src/Theon.Localization.Nl/Theon.Localization.Nl.csproj" />
+    <Project Path="src/Theon.Localization.Pl/Theon.Localization.Pl.csproj" />
     <Project Path="src/Theon.Localization.PtBr/Theon.Localization.PtBr.csproj" />
     <Project Path="src/Theon/Theon.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Theon.AspNetCore.Tests/Theon.AspNetCore.Tests.csproj" />
+    <Project Path="tests/Theon.Localization.Languages.Tests/Theon.Localization.Languages.Tests.csproj" />
     <Project Path="tests/Theon.Localization.PtBr.Tests/Theon.Localization.PtBr.Tests.csproj" />
     <Project Path="tests/Theon.Tests/Theon.Tests.csproj" />
   </Folder>

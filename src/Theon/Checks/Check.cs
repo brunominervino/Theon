@@ -1,3 +1,5 @@
+using Theon.Metadata;
+
 namespace Theon.Checks;
 
 // One rule applied to a value that has already been established to be of the right type.
@@ -21,4 +23,32 @@ internal abstract class Check<T>
 
     // Applies this rule, recording any failure into .
     internal abstract void Run(ref ParseContext context, ref T value);
+
+    // Contributes this rule to a description of the schema that holds it.
+    //
+    // The default contributes no constraint, which is the right answer for a rule a document cannot
+    // express: a refinement is an arbitrary predicate with no keyword to map to, and a normalization
+    // rewrites the value rather than constraining it. Leaving such a rule out makes the document
+    // incomplete; inventing a keyword for it would make the document wrong.
+    //
+    // What it does contribute is the fact that it could not be expressed, so that a caller who asked
+    // to be told about that can be. Every rule that has nothing to say is reported by not overriding
+    // this, which means a rule added later is covered without anyone remembering to cover it.
+    internal virtual void Describe(SchemaDescription description)
+    {
+        ArgumentNullException.ThrowIfNull(description);
+        description.CannotRepresent(RuleName);
+    }
+
+    // The type name, without the generic arity a runtime type name carries. Read at describe time
+    // only, which is a start-up or tooling operation and never a parse.
+    private string RuleName
+    {
+        get
+        {
+            var name = GetType().Name;
+            var arity = name.IndexOf('`', StringComparison.Ordinal);
+            return arity < 0 ? name : name[..arity];
+        }
+    }
 }

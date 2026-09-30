@@ -117,6 +117,68 @@ public sealed class Comment
     public IReadOnlyList<Comment> Replies { get; set; } = [];
 }
 
+public abstract class Payment
+{
+    public decimal Amount { get; set; }
+}
+
+public sealed class PixPayment : Payment
+{
+    public string Key { get; set; } = string.Empty;
+}
+
+public sealed class CardPayment : Payment
+{
+    public string Number { get; set; } = string.Empty;
+
+    public string Holder { get; set; } = string.Empty;
+}
+
+public sealed class BoletoPayment : Payment
+{
+    public string Barcode { get; set; } = string.Empty;
+}
+
+public sealed class Order
+{
+    public Payment Payment { get; set; } = new PixPayment();
+}
+
+public interface IInstrument
+{
+    string Label { get; }
+}
+
+public sealed class Wire : IInstrument
+{
+    public string Label { get; set; } = string.Empty;
+}
+
+// The same domain modelled as one flat class, which is what a service that does not use polymorphic
+// serialization sends. Its rules are conditional on a property, not on a type.
+public sealed class FlatPayment
+{
+    public string Kind { get; set; } = string.Empty;
+
+    public string? PixKey { get; set; }
+
+    public string? CardNumber { get; set; }
+}
+
+public sealed class Query
+{
+    public string Sort { get; set; } = "asc";
+
+    public string PageSize { get; set; } = "20";
+}
+
+public sealed class Article
+{
+    public string Title { get; set; } = string.Empty;
+
+    public IReadOnlyCollection<string> Tags { get; set; } = new HashSet<string>();
+}
+
 public sealed class Catalogue
 {
     public IReadOnlyDictionary<string, decimal> Prices { get; set; } =

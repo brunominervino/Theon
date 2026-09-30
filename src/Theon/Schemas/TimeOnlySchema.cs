@@ -1,4 +1,5 @@
 using Theon.Checks;
+using Theon.Metadata;
 
 namespace Theon.Schemas;
 
@@ -52,6 +53,9 @@ public sealed class TimeOnlySchema : Schema<TimeOnly>
 
     /// <summary>Accepts <see langword="null"/> in addition to everything this schema accepts.</summary>
     public Schema<TimeOnly?> AllowNull() => new NullableValueSchema<TimeOnly>(this);
+
+    internal override SchemaDescription Describe(DescriptionContext context) =>
+        CheckDescription.Of(SchemaKind.String, _checks, "time");
 
     /// <inheritdoc />
     public override bool TryParse(ref ParseContext context, TimeOnly input, out TimeOnly output)

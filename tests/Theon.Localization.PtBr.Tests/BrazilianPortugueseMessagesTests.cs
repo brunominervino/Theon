@@ -104,6 +104,77 @@ public class BrazilianPortugueseMessagesTests
         }
     }
 
+    // A provider that returns null for a code falls through to the built-in English, which is worse
+    // than a rough translation: the reader gets two languages in one form. These tests fail the
+    // moment a new code or format is added to the core without a sentence here.
+    [Fact]
+    public void Every_Error_Code_This_Library_Reports_Has_A_Sentence()
+    {
+        // Custom is deliberately absent: a refinement carries its own message, written by whoever
+        // wrote the rule, and a provider has nothing to add to it.
+        var codes = Enum.GetValues<ValidationErrorCode>()
+            .Where(static code => code != ValidationErrorCode.Custom);
+
+        foreach (var code in codes)
+        {
+            var info = new ValidationErrorInfo { Code = code, Expected = "x", Divisor = 2 };
+
+            Assert.False(
+                string.IsNullOrWhiteSpace(BrazilianPortugueseMessages.For(in info)),
+                $"pt-BR has no sentence for {code}, so it would fall back to English.");
+        }
+    }
+
+    [Fact]
+    public void Every_Format_This_Library_Reports_Has_A_Sentence()
+    {
+        var cases = new (string Name, Schema<string> Schema, string Value)[]
+        {
+            ("email", Theo.String().Email(), "nope"),
+            ("url", Theo.String().Url(), "nope"),
+            ("uuid", Theo.String().Uuid(), "nope"),
+            ("base64", Theo.String().Base64(), "QQ="),
+            ("base64url", Theo.String().Base64Url(), "QQ=="),
+            ("hex", Theo.String().Hex(), "zz"),
+            ("e164", Theo.String().E164(), "nope"),
+            ("iso8601", Theo.String().Iso8601(), "nope"),
+            ("iso8601_date", Theo.String().Iso8601Date(), "nope"),
+            ("ipv4", Theo.String().Ipv4(), "nope"),
+            ("ipv6", Theo.String().Ipv6(), "nope"),
+            ("cidr", Theo.String().Cidr(), "nope"),
+            ("hostname", Theo.String().Hostname(), "-nope-"),
+            ("jwt", Theo.String().Jwt(), "nope"),
+            ("credit_card", Theo.String().CreditCard(), "nope"),
+            ("iban", Theo.String().Iban(), "nope"),
+            ("uppercase", Theo.String().Uppercase(), "abc"),
+            ("lowercase", Theo.String().Lowercase(), "ABC"),
+            ("starts_with", Theo.String().StartsWith("ab"), "zz"),
+            ("ends_with", Theo.String().EndsWith("ab"), "zz"),
+            ("contains", Theo.String().Contains("ab"), "zz"),
+        };
+
+        foreach (var (name, schema, value) in cases)
+        {
+            var error = schema.SafeParse(value).Errors[0];
+
+            Assert.False(
+                string.IsNullOrWhiteSpace(BrazilianPortugueseMessages.For(in error.Info)),
+                $"pt-BR has no sentence for the {name} format, so it would fall back to English.");
+        }
+    }
+
+    [Fact]
+    public void The_Uri_Formats_Have_Sentences()
+    {
+        var absolute = Theo.Uri().Absolute().SafeParse(new Uri("/api", UriKind.Relative)).Errors[0];
+        var scheme = Theo.Uri().Scheme("https").SafeParse(new Uri("ftp://example.com")).Errors[0];
+
+        Assert.Equal("Deve ser um endereço absoluto.", BrazilianPortugueseMessages.For(in absolute.Info));
+        Assert.Equal(
+            "O esquema deve ser um destes: https.",
+            BrazilianPortugueseMessages.For(in scheme.Info));
+    }
+
     public sealed class Request
     {
         public string Nome { get; set; } = string.Empty;

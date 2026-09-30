@@ -42,12 +42,17 @@ time anything here parses, the value is already a typed .NET object.
 A rule that rewrites the value rather than rejecting it, such as trimming or lowercasing. A
 normalization affects the rules that follow it, and never the object the value came from.
 
-Distinguish it from a **transformation**, which changes the *type* of the value and can only appear
-at the end of a chain.
+Distinguish it from a **transformation**, which changes the *type* of the value. A transformation
+used to have to be the last thing in a chain; it no longer does, and rules may follow it to check
+what it produced. See `docs/decisions/0010-transformations-are-not-the-end-of-a-chain.md`.
 
 ## Refinement
 
-A rule expressed as a predicate supplied by the caller, rather than one the library provides.
+A rule supplied by the caller, rather than one the library provides.
+
+It takes one of two shapes. A predicate answers yes or no and the library writes the error; a rule
+that receives the parse can report for itself, as many times as it has things to say and at whatever
+path each one belongs to. See `docs/decisions/0011-a-rule-that-reports-for-itself.md`.
 
 ## Field
 
@@ -83,6 +88,28 @@ An error at the root of the parsed value has an **empty path**, not a null one.
 
 What kind of quantity a bound was measured against — text, a number, a collection — so that one
 error code can carry bounds that need different sentences to describe them.
+
+## Description
+
+The reified structure of a schema: its kind, its bounds, its formats, its children. A schema
+produces one on demand so that a document can be generated without anything having to ask what kind
+of schema it is holding.
+
+A description is not a schema and does not validate. It is what a schema says about itself.
+
+## Annotation
+
+Documentation attached to a schema — a title, a sentence, an example, a note that it is deprecated.
+
+An annotation never validates anything. It exists so that a generated document can say what the
+rules cannot: why a field exists, what a refinement is checking, which of several acceptable forms
+is preferred. We say **annotation** for this and **message** for the text of an error; they are both
+prose and they are read by different people at different times.
+
+## Document
+
+A generated JSON Schema, in the 2020-12 dialect. Produced from a description, never from a schema
+directly.
 
 ## Message provider
 

@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Numerics;
 using Theon.Checks;
 using Theon.Errors;
+using Theon.Metadata;
 
 namespace Theon.Schemas;
 
@@ -108,6 +109,9 @@ public sealed class NumberSchema<T> : Schema<T>
 
     /// <summary>Accepts <see langword="null"/> in addition to everything this schema accepts.</summary>
     public Schema<T?> AllowNull() => new NullableValueSchema<T>(this);
+
+    internal override SchemaDescription Describe(DescriptionContext context) =>
+        CheckDescription.Of(SchemaKinds.For(typeof(T)), _checks);
 
     /// <inheritdoc />
     public override bool TryParse(ref ParseContext context, T input, out T output)

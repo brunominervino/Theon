@@ -1,6 +1,8 @@
 using Theon.Checks;
 using Theon.Errors;
 
+using Theon.Metadata;
+
 namespace Theon.Schemas;
 
 /// <summary>
@@ -44,7 +46,7 @@ public sealed class CollectionSchema<TElement> : Schema<IReadOnlyList<TElement>>
     public CollectionSchema<TElement> MinCount(int minimum, string? message = null)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(minimum);
-        return With(new MinCountCheck<TElement>(minimum) { Message = message });
+        return With(new MinCountCheck<IReadOnlyList<TElement>, TElement>(minimum) { Message = message });
     }
 
     /// <summary>Requires at most <paramref name="maximum"/> elements.</summary>
@@ -53,7 +55,7 @@ public sealed class CollectionSchema<TElement> : Schema<IReadOnlyList<TElement>>
     public CollectionSchema<TElement> MaxCount(int maximum, string? message = null)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(maximum);
-        return With(new MaxCountCheck<TElement>(maximum) { Message = message });
+        return With(new MaxCountCheck<IReadOnlyList<TElement>, TElement>(maximum) { Message = message });
     }
 
     /// <summary>Requires exactly <paramref name="count"/> elements.</summary>
@@ -62,12 +64,37 @@ public sealed class CollectionSchema<TElement> : Schema<IReadOnlyList<TElement>>
     public CollectionSchema<TElement> Count(int count, string? message = null)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(count);
-        return With(new ExactCountCheck<TElement>(count) { Message = message });
+        return With(new ExactCountCheck<IReadOnlyList<TElement>, TElement>(count) { Message = message });
     }
 
     /// <summary>Requires at least one element.</summary>
     /// <param name="message">A message that replaces the default for this rule.</param>
     public CollectionSchema<TElement> NotEmpty(string? message = null) => MinCount(1, message);
+
+    /// <summary>Requires every element to be distinct.</summary>
+    /// <param name="message">A message that replaces the default for this rule.</param>
+    /// <remarks>
+    /// <para>
+    /// Equality is <see cref="EqualityComparer{T}.Default"/>, so a record or a string compares by
+    /// value and a plain class compares by reference unless it says otherwise.
+    /// </para>
+    /// <para>
+    /// A repeat is reported at its own index rather than once about the list, so a form can mark the
+    /// row a person has to fix. The first occurrence of a value is never the one reported.
+    /// </para>
+    /// <para>
+    /// A short list is compared pairwise and allocates nothing, which is the case this rule is
+    /// actually asked about. A long one falls back to a set, trading one allocation for the quadratic
+    /// term; where that changes over is an implementation detail and not part of the contract.
+    /// </para>
+    /// </remarks>
+    /// <example>
+    /// <code>
+    /// Theo.Collection(Theo.String().Trim().ToLowerInvariant()).MaxCount(10).Unique();
+    /// </code>
+    /// </example>
+    public CollectionSchema<TElement> Unique(string? message = null) =>
+        With(new UniqueCheck<TElement>() { Message = message });
 
     /// <summary>Requires the list as a whole to satisfy a predicate.</summary>
     /// <param name="predicate">Returns <see langword="true"/> when the list is acceptable.</param>
@@ -82,6 +109,15 @@ public sealed class CollectionSchema<TElement> : Schema<IReadOnlyList<TElement>>
     /// <summary>Accepts <see langword="null"/> in addition to everything this schema accepts.</summary>
     public Schema<IReadOnlyList<TElement>?> AllowNull() =>
         new NullableReferenceSchema<IReadOnlyList<TElement>>(this);
+
+    internal override SchemaDescription Describe(DescriptionContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+
+        var description = CheckDescription.Of(SchemaKind.Array, _checks);
+        description.Items = context.Describe(_element);
+        return description;
+    }
 
     /// <inheritdoc />
     /// <remarks>

@@ -1,5 +1,6 @@
 using Theon.Checks;
 using Theon.Errors;
+using Theon.Metadata;
 
 namespace Theon.Schemas;
 
@@ -96,6 +97,9 @@ public sealed class DateTimeSchema : Schema<DateTime>
 
     /// <summary>Accepts <see langword="null"/> in addition to everything this schema accepts.</summary>
     public Schema<DateTime?> AllowNull() => new NullableValueSchema<DateTime>(this);
+
+    internal override SchemaDescription Describe(DescriptionContext context) =>
+        CheckDescription.Of(SchemaKind.String, _checks, "date-time");
 
     /// <inheritdoc />
     public override bool TryParse(ref ParseContext context, DateTime input, out DateTime output)

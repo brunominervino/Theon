@@ -24,6 +24,10 @@ public static class DefaultErrorMessages
             CultureInfo.InvariantCulture,
             $"Must be a multiple of {error.Divisor}."),
         ValidationErrorCode.InvalidValue => "Invalid value.",
+        ValidationErrorCode.NotEqual => string.Create(
+            CultureInfo.InvariantCulture,
+            $"Must be {error.Expected}."),
+        ValidationErrorCode.Duplicate => "Already listed.",
         _ => "Invalid input.",
     };
 
@@ -68,6 +72,27 @@ public static class DefaultErrorMessages
     private static string InvalidFormat(in ValidationErrorInfo error) => error.Format switch
     {
         "email" => "Invalid e-mail address.",
+        "url" => "Invalid web address.",
+        "uuid" => "Invalid UUID.",
+        "base64" => "Invalid base64.",
+        "base64url" => "Invalid URL-safe base64.",
+        "hex" => "Must be hexadecimal.",
+        // "Invalid E.164 number" would be accurate and useless: the person reading this filled in a
+        // form and has never heard of E.164.
+        "e164" => "Invalid phone number.",
+        "iso8601" => "Invalid date and time.",
+        "iso8601_date" => "Invalid date.",
+        "absolute_uri" => "Must be an absolute address.",
+        "uri_scheme" => string.Create(
+            CultureInfo.InvariantCulture,
+            $"Scheme must be one of: {error.Expected}."),
+        "ipv4" => "Invalid IPv4 address.",
+        "ipv6" => "Invalid IPv6 address.",
+        "cidr" => "Invalid CIDR range.",
+        "hostname" => "Invalid host name.",
+        "jwt" => "Invalid token.",
+        "credit_card" => "Invalid card number.",
+        "iban" => "Invalid IBAN.",
         "regex" => "Invalid format.",
         "starts_with" => string.Create(CultureInfo.InvariantCulture, $"Must start with {error.Expected}."),
         "ends_with" => string.Create(CultureInfo.InvariantCulture, $"Must end with {error.Expected}."),

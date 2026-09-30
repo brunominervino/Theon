@@ -1,6 +1,8 @@
 using Theon.Checks;
 using Theon.Errors;
 
+using Theon.Metadata;
+
 namespace Theon.Schemas;
 
 /// <summary>
@@ -78,6 +80,19 @@ public sealed class RecordSchema<TKey, TValue> : Schema<IReadOnlyDictionary<TKey
         ArgumentNullException.ThrowIfNull(predicate);
         ArgumentException.ThrowIfNullOrEmpty(message);
         return With(new RefineCheck<IReadOnlyDictionary<TKey, TValue>>(predicate, message));
+    }
+
+    internal override SchemaDescription Describe(DescriptionContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+
+        var description = CheckDescription.Of(SchemaKind.Map, _checks);
+
+        // The value schema becomes additionalProperties, which is how a document says "any key, this
+        // kind of value". What the key schema requires has nowhere to go: propertyNames exists in the
+        // dialect but takes a schema over the text of a key, and ours is a schema over its type.
+        description.AdditionalProperties = context.Describe(_value);
+        return description;
     }
 
     /// <inheritdoc />

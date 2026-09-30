@@ -41,6 +41,23 @@ public struct CreateUserValue
     public Guid CompanyId { get; set; }
 }
 
+public abstract class Payment
+{
+    public decimal Amount { get; set; }
+}
+
+public sealed class PixPayment : Payment
+{
+    public string Key { get; set; } = string.Empty;
+}
+
+public sealed class CardPayment : Payment
+{
+    public string Number { get; set; } = string.Empty;
+
+    public string Holder { get; set; } = string.Empty;
+}
+
 public enum TicketStatus
 {
     Open = 0,

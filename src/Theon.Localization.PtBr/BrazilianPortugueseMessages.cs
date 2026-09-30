@@ -46,6 +46,8 @@ public static class BrazilianPortugueseMessages
         ValidationErrorCode.InvalidFormat => InvalidFormat(error),
         ValidationErrorCode.NotMultipleOf => Format($"Deve ser múltiplo de {error.Divisor}."),
         ValidationErrorCode.InvalidValue => "Valor inválido.",
+        ValidationErrorCode.NotEqual => Format($"Deve ser {error.Expected}."),
+        ValidationErrorCode.Duplicate => "Item repetido.",
         ValidationErrorCode.Custom => null,
         _ => null,
     };
@@ -101,6 +103,25 @@ public static class BrazilianPortugueseMessages
     private static string? InvalidFormat(in ValidationErrorInfo error) => error.Format switch
     {
         "email" => "E-mail inválido.",
+        "url" => "Endereço web inválido.",
+        "uuid" => "UUID inválido.",
+        "base64" => "Base64 inválido.",
+        "base64url" => "Base64 para URL inválido.",
+        "hex" => "Deve ser hexadecimal.",
+        // "Número E.164 inválido" seria exato e inútil: quem lê isto preencheu um formulário e
+        // nunca ouviu falar de E.164.
+        "e164" => "Telefone inválido.",
+        "iso8601" => "Data e hora inválidas.",
+        "iso8601_date" => "Data inválida.",
+        "absolute_uri" => "Deve ser um endereço absoluto.",
+        "uri_scheme" => Format($"O esquema deve ser um destes: {error.Expected}."),
+        "ipv4" => "Endereço IPv4 inválido.",
+        "ipv6" => "Endereço IPv6 inválido.",
+        "cidr" => "Faixa CIDR inválida.",
+        "hostname" => "Nome de host inválido.",
+        "jwt" => "Token inválido.",
+        "credit_card" => "Número de cartão inválido.",
+        "iban" => "IBAN inválido.",
         "regex" => "Formato inválido.",
         "starts_with" => Format($"Deve começar com {error.Expected}."),
         "ends_with" => Format($"Deve terminar com {error.Expected}."),

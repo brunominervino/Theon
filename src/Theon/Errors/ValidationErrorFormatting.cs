@@ -48,6 +48,59 @@ public static class ValidationErrorFormatting
                 : fields.ToDictionary(p => p.Key, p => (IReadOnlyList<string>)p.Value, StringComparer.Ordinal));
     }
 
+    /// <summary>Renders the errors as lines a person can read.</summary>
+    /// <param name="errors">The errors to render.</param>
+    /// <remarks>
+    /// <para>
+    /// For a log, a console, a test failure — the places where a human reads the errors and no
+    /// structure helps. <see cref="Flatten"/> and <see cref="ToTree"/> serve a form and an API
+    /// respectively, and neither is pleasant to read in a terminal.
+    /// </para>
+    /// <para>
+    /// One line per error, the path first and the message after it, with the root written as a dash
+    /// because an empty path renders as nothing and a line starting with a colon reads as a mistake.
+    /// The order is the order the errors were produced, which is the order the value was walked.
+    /// </para>
+    /// <para>
+    /// Not a format to parse. It is arranged for reading and will be rearranged whenever that reads
+    /// better; branch on <see cref="ValidationError.Code"/> and walk
+    /// <see cref="ValidationPath.Segments"/> for anything a program has to act on.
+    /// </para>
+    /// </remarks>
+    /// <example>
+    /// <code>
+    /// logger.LogWarning("Rejected the request:{NewLine}{Errors}", Environment.NewLine, result.Errors.ToPrettyString());
+    /// // Email: Invalid e-mail address.
+    /// // Recipients[1]: A value is required.
+    /// </code>
+    /// </example>
+    public static string ToPrettyString(this IReadOnlyList<ValidationError> errors)
+    {
+        ArgumentNullException.ThrowIfNull(errors);
+
+        if (errors.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        var builder = new System.Text.StringBuilder();
+
+        for (var i = 0; i < errors.Count; i++)
+        {
+            if (i > 0)
+            {
+                builder.Append(Environment.NewLine);
+            }
+
+            var error = errors[i];
+            var path = error.Path.ToString();
+
+            builder.Append(path.Length == 0 ? "-" : path).Append(": ").Append(error.Message);
+        }
+
+        return builder.ToString();
+    }
+
     /// <summary>Arranges errors to mirror the shape of the value that produced them.</summary>
     /// <param name="errors">The errors to arrange.</param>
     public static ValidationErrorTree ToTree(this IReadOnlyList<ValidationError> errors)

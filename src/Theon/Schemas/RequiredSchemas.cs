@@ -1,5 +1,7 @@
 using Theon.Errors;
 
+using Theon.Metadata;
+
 namespace Theon.Schemas;
 
 // Rejects null for a value type, and otherwise defers to an inner schema.
@@ -10,6 +12,10 @@ namespace Theon.Schemas;
 internal sealed class RequiredValueSchema<T>(Schema<T> inner, string? message) : Schema<T?>
     where T : struct
 {
+    // The nullable shape refuses the null, so nothing about the description changes: a document says
+    // "this may not be null" by leaving null out of the type and by naming the property as required.
+    internal override SchemaDescription Describe(DescriptionContext context) => context.Describe(inner);
+
     public override bool TryParse(ref ParseContext context, T? input, out T? output)
     {
         if (input is null)
@@ -62,6 +68,8 @@ internal sealed class RequiredValueSchema<T>(Schema<T> inner, string? message) :
 internal sealed class RequiredReferenceSchema<T>(Schema<T> inner, string? message) : Schema<T?>
     where T : class
 {
+    internal override SchemaDescription Describe(DescriptionContext context) => context.Describe(inner);
+
     public override bool TryParse(ref ParseContext context, T? input, out T? output)
     {
         if (input is null)

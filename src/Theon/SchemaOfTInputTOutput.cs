@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using Theon.Metadata;
 
 namespace Theon;
 
@@ -154,8 +155,173 @@ public abstract class Schema<TInput, TOutput>
     public Schema<TInput, TNext> Transform<TNext>(Func<TOutput, TNext> transform)
     {
         ArgumentNullException.ThrowIfNull(transform);
-        return new Schemas.TransformSchema<TInput, TOutput, TNext>(this, transform);
+        return new Schemas.TransformSchema<TInput, TOutput, TNext>(this, transform, then: null);
     }
+
+    /// <summary>
+    /// Produces a schema that runs this one, maps the result to another type, and then validates what
+    /// it mapped to.
+    /// </summary>
+    /// <typeparam name="TNext">The type to map to.</typeparam>
+    /// <param name="transform">The mapping. Runs only when this schema succeeded.</param>
+    /// <param name="then">The schema the mapped value must satisfy.</param>
+    /// <remarks>
+    /// <para>
+    /// A transformation used to have to be the last thing in a chain, which left the most ordinary
+    /// pipeline there is unsayable: text arrives, becomes a number, and the number has bounds. Every
+    /// query string, form field and configuration value is that shape.
+    /// </para>
+    /// <para>
+    /// Errors from <paramref name="then"/> land at the same path as the value that produced them, so a
+    /// page size out of range reports against <c>PageSize</c> and not against the number it became.
+    /// </para>
+    /// <para>
+    /// A generated document cannot express this, and records that it could not: the document describes
+    /// what a caller sends, and the dialect has no way to state a bound on what this program made of
+    /// it. Ask <c>ToJsonSchema</c> to report what it had to leave out if that matters.
+    /// </para>
+    /// </remarks>
+    /// <example>
+    /// <code>
+    /// Schema&lt;string, int&gt; pageSize = Theo.String().Trim()
+    ///     .TryTransform&lt;int&gt;(int.TryParse, "Must be a whole number.", Theo.Int().Min(1).Max(100));
+    /// </code>
+    /// </example>
+    public Schema<TInput, TNext> Transform<TNext>(Func<TOutput, TNext> transform, Schema<TNext> then)
+    {
+        ArgumentNullException.ThrowIfNull(transform);
+        ArgumentNullException.ThrowIfNull(then);
+        return new Schemas.TransformSchema<TInput, TOutput, TNext>(this, transform, then);
+    }
+
+    /// <summary>
+    /// Produces a schema that runs this one and then converts the result, reporting a failed
+    /// conversion rather than throwing.
+    /// </summary>
+    /// <typeparam name="TNext">The type to convert to.</typeparam>
+    /// <param name="attempt">
+    /// The conversion, shaped like <c>TryParse</c> so that <c>int.TryParse</c> and its relatives can
+    /// be handed over as they are.
+    /// </param>
+    /// <param name="message">The message to report when the conversion fails.</param>
+    /// <param name="then">
+    /// An optional schema the converted value must satisfy, checked only once the conversion
+    /// succeeded.
+    /// </param>
+    /// <remarks>
+    /// <para>
+    /// <see cref="Transform{TNext}(Func{TOutput, TNext})"/> takes a mapping that cannot fail, which
+    /// rules out the mapping most often wanted: text into a number. <c>int.Parse</c> throws, and an
+    /// exception is the wrong answer to a value a person typed wrongly. This reports instead, at the
+    /// path the value came from, alongside every other error in the same parse.
+    /// </para>
+    /// <para>
+    /// The conversion runs only after this schema passed, so it never sees a value already known to be
+    /// unacceptable.
+    /// </para>
+    /// </remarks>
+    /// <example>
+    /// <code>
+    /// // A page size that arrives as text, becomes a number, and then has to be in range.
+    /// Theo.String().Trim()
+    ///     .TryTransform&lt;int&gt;(int.TryParse, "Must be a whole number.", Theo.Int().Min(1).Max(100));
+    /// </code>
+    /// </example>
+    public Schema<TInput, TNext> TryTransform<TNext>(
+        TransformAttempt<TOutput, TNext> attempt,
+        string message,
+        Schema<TNext>? then = null)
+    {
+        ArgumentNullException.ThrowIfNull(attempt);
+        ArgumentException.ThrowIfNullOrEmpty(message);
+        return new Schemas.TryTransformSchema<TInput, TOutput, TNext>(this, attempt, message, then);
+    }
+
+    /// <summary>
+    /// Produces a schema that never fails: where this one rejects the value, the result reports
+    /// nothing and answers with <paramref name="fallback"/>.
+    /// </summary>
+    /// <param name="fallback">The value to produce when this schema rejects the input.</param>
+    /// <remarks>
+    /// <para>
+    /// For an input you would rather interpret than argue with: a sort order from a query string, a
+    /// feature flag from a header, a stale value in a configuration file. Errors the inner schema
+    /// raised are discarded, not merged, so nothing downstream sees a complaint about a value that
+    /// was replaced.
+    /// </para>
+    /// <para>
+    /// A rejected value is swallowed; an exception is not. A refinement that threw, or an
+    /// asynchronous rule reached from the synchronous path, is a defect in the program rather than
+    /// something a person typed wrongly, and a fallback that hid it would turn a loud failure at the
+    /// first call into a wrong answer for ever.
+    /// </para>
+    /// <para>
+    /// Like <c>Default</c>, this shapes the value a parse produces, so it belongs where that value is
+    /// read — a top-level parse, or a step in a chain. An object schema validates an instance without
+    /// rebuilding it, so a fallback on a field would silence the error and change nothing else.
+    /// </para>
+    /// </remarks>
+    /// <example>
+    /// <code>
+    /// // An unrecognised sort order is not worth a 400.
+    /// var order = Theo.Enum&lt;SortOrder&gt;().Catch(SortOrder.Ascending).Parse(parsed);
+    /// </code>
+    /// </example>
+    public Schema<TInput, TOutput> Catch(TOutput fallback) =>
+        new Schemas.CatchSchema<TInput, TOutput>(this, fallback);
+
+    /// <summary>
+    /// Produces a schema that carries documentation alongside the rules, for generated documents.
+    /// </summary>
+    /// <param name="title">A short name for the value.</param>
+    /// <param name="description">A sentence or two about what the value means.</param>
+    /// <param name="example">A value worth showing a reader.</param>
+    /// <param name="deprecated">Whether callers should stop using it.</param>
+    /// <remarks>
+    /// <para>
+    /// Annotations do not validate anything. They exist so that a document generated by
+    /// <c>ToJsonSchema</c> can say what the rules cannot: why a field exists, what a
+    /// <c>Refine</c> is checking, which of several acceptable forms is preferred.
+    /// </para>
+    /// <para>
+    /// Kept on the schema rather than in a table on the side. A schema is immutable and is built once
+    /// at start-up, so a wrapper costs one delegating call on a schema that opted in and nothing at
+    /// all on one that did not — where a registry keyed on instances would mean global mutable state
+    /// and a lifetime to reason about.
+    /// </para>
+    /// <para>
+    /// Annotating produces a plain schema, so it goes last in a chain, the way <c>Catch</c> and
+    /// <c>Transform</c> do. Calling it with nothing to say returns the same schema.
+    /// </para>
+    /// </remarks>
+    /// <example>
+    /// <code>
+    /// Theo.String().Email().Annotate(
+    ///     description: "Where we write to you. Never shown to other people.",
+    ///     example: "ada@example.com");
+    /// </code>
+    /// </example>
+    public Schema<TInput, TOutput> Annotate(
+        string? title = null,
+        string? description = null,
+        object? example = null,
+        bool deprecated = false)
+    {
+        if (title is null && description is null && example is null && !deprecated)
+        {
+            return this;
+        }
+
+        return new Schemas.AnnotatedSchema<TInput, TOutput>(this, title, description, example, deprecated);
+    }
+
+    // Reifies this schema's structure, so that a document can be generated without asking what kind
+    // of schema it is holding. The default says nothing, which is the honest answer for a schema this
+    // assembly does not know: the hook is internal, so a custom schema from elsewhere cannot describe
+    // itself, and a document that omits a constraint is incomplete where one that invents a type
+    // would be wrong.
+    internal virtual SchemaDescription Describe(DescriptionContext context) =>
+        new() { Kind = SchemaKind.Unknown };
 
     private static readonly ParseOptions FailFastOptions = new() { StopOnFirstError = true };
 }

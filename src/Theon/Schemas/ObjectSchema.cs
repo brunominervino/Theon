@@ -2,6 +2,8 @@ using System.Runtime.CompilerServices;
 using Theon.Checks;
 using Theon.Errors;
 
+using Theon.Metadata;
+
 namespace Theon.Schemas;
 
 /// <summary>
@@ -248,6 +250,21 @@ public sealed class ObjectSchema<T> : Schema<T>
             ?? throw new ArgumentException("The rules builder returned null.", nameof(rules));
 
         return new ObjectSchema<T>(_fields, [.. _checks, new ConditionalSchemaCheck<T>(condition, inner)]);
+    }
+
+    internal override SchemaDescription Describe(DescriptionContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+
+        var description = CheckDescription.Of(SchemaKind.Object, _checks);
+        description.Properties = [];
+
+        foreach (var field in _fields)
+        {
+            description.Properties.Add(field.Describe(context));
+        }
+
+        return description;
     }
 
     /// <inheritdoc />

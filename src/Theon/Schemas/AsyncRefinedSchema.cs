@@ -1,5 +1,7 @@
 using Theon.Errors;
 
+using Theon.Metadata;
+
 namespace Theon.Schemas;
 
 // Wraps any schema with a rule that has to await something: a lookup, a call, a query.
@@ -13,6 +15,10 @@ internal sealed class AsyncRefinedSchema<T>(
     Func<T, CancellationToken, ValueTask<bool>> predicate,
     string message) : Schema<T>
 {
+    // An asynchronous refinement is still a refinement: an arbitrary predicate, with no keyword to
+    // map it to. The inner schema's shape is the whole of what can be said.
+    internal override SchemaDescription Describe(DescriptionContext context) => context.Describe(inner);
+
     public override bool TryParse(ref ParseContext context, T input, out T output) =>
         throw new SchemaAsyncUsageException();
 

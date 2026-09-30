@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Theon.Localization.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/Theon.Localization.Es/Theon.Localization.Es.csproj" />
+    <ProjectReference Include="../../src/Theon.Localization.Fr/Theon.Localization.Fr.csproj" />
+    <ProjectReference Include="../../src/Theon.Localization.De/Theon.Localization.De.csproj" />
+    <ProjectReference Include="../../src/Theon.Localization.It/Theon.Localization.It.csproj" />
+    <ProjectReference Include="../../src/Theon.Localization.Nl/Theon.Localization.Nl.csproj" />
+    <ProjectReference Include="../../src/Theon.Localization.Pl/Theon.Localization.Pl.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+  </ItemGroup>
+
+</Project>

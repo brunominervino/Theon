@@ -71,3 +71,41 @@ jobs:
       # Run them locally and report the three axes, as AGENTS.md requires.
       - name: Build benchmarks
         run: dotnet build benchmarks/Theon.Benchmarks/Theon.Benchmarks.csproj -c Release
+
+  aot:
+    name: native AOT publishes and stays small
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      # The AOT compiler shells out to clang and needs zlib to link.
+      - name: Install the native toolchain
+        run: sudo apt-get update && sudo apt-get install -y clang zlib1g-dev
+
+      # IsAotCompatible already makes a trim or AOT warning a build error, so this job is not
+      # checking whether the library is AOT-safe -- the build proves that on every push. What it
+      # checks is the thing a build cannot: that the compiler gets all the way through, and what the
+      # result costs. A library can satisfy every analyzer and still make an application it is linked
+      # into much larger.
+      - name: Publish the sample for native AOT
+        run: >
+          dotnet publish samples/Theon.Sample/Theon.Sample.csproj
+          -c Release -r linux-x64 -p:PublishAot=true -o aot-out
+
+      - name: Report and check the native size
+        run: |
+          size=$(stat -c %s aot-out/Theon.Sample)
+          echo "Native executable: $size bytes"
+          echo "### Native AOT size: $((size / 1024)) KiB" >> "$GITHUB_STEP_SUMMARY"
+          # A hello-world AOT executable is around 1.2 MiB before any library is linked in. The
+          # ceiling is generous on purpose: this catches a dependency being pulled in or reflection
+          # defeating the trimmer, not ordinary growth. Raise it deliberately, in a diff.
+          if [ "$size" -gt 4194304 ]; then
+            echo "Over the 4 MiB ceiling. Something is being kept that used to be trimmed."
+            exit 1
+          fi

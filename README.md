@@ -48,7 +48,9 @@ provider chain, so nothing has to branch on English text to work out what went w
 
 **A valid value allocates nothing.** Not for a string, not for a number, not for a nested object.
 The parse context lives on the stack, and the error list and the path are not created until
-something actually fails.
+something actually fails. There is exactly one exception in the library and it is in the table below:
+a set cannot be walked through an interface without boxing its enumerator, and unlike a list it has
+no indexer to reach for instead.
 
 | | Time | Allocated |
 |---|---:|---:|
@@ -58,8 +60,36 @@ something actually fails.
 | Enum, checked against its declared members | 14 ns | 0 B |
 | List of 20 e-mail addresses, valid | 2,599 ns | 0 B |
 | Flat object, four fields, all invalid | 497 ns | 872 B |
+| `Theo.String().Url()`, valid | 174 ns | 0 B |
+| Discriminated union, second branch, valid | 91 ns | 0 B |
+| Set of 10 tags, valid | 128 ns | 40 B |
+| `Theo.String().Ipv6()`, valid | 30 ns | 0 B |
+| Text to a number with bounds, valid | 27 ns | 0 B |
 
 <sub>net10.0, x64. Reproduce with the benchmark command below; absolute numbers will differ by machine.</sub>
+
+The same four rules written three ways, which is the comparison that answers "why would I switch":
+
+| Four fields, valid | Time | Allocated |
+|---|---:|---:|
+| Theon | 246 ns | **0 B** |
+| FluentValidation | 785 ns | 600 B |
+| DataAnnotations | 1,704 ns | 2,288 B |
+
+| Four fields, all invalid | Time | Allocated |
+|---|---:|---:|
+| Theon | 547 ns | 872 B |
+| DataAnnotations | 3,066 ns | 3,104 B |
+| FluentValidation | 7,836 ns | 9,336 B |
+
+<sub>Read the times as the order of magnitude they are and not as precise figures. The run they
+come from had a standard deviation of ten to twenty per cent, and the same Theon schema measured
+246 ns there against 185 ns in the quieter run above — which is what a machine doing other work does
+to a benchmark, and which means the ratios here understate rather than flatter. The allocation column
+is an exact count and is unaffected by any of that. The comparison is in
+<code>benchmarks/ComparisonBenchmarks.cs</code>, which also documents the ways it cannot be made
+fair: Theon's e-mail pattern is stricter than either of the other two, so it is doing more work per
+address, not less.</sub>
 
 **No reflection anywhere.** `Field(x => x.Email, ...)` takes a plain delegate, and the property name
 comes from the compiler through `CallerArgumentExpression`. There is no expression tree to interpret
@@ -139,6 +169,136 @@ Theo.OneOf(
 One message, not one per rejected branch: "not an e-mail, and not a phone number" is two
 complaints about a field where the reader wanted one.
 
+**A closed hierarchy dispatches on its type.** A discriminated union, written the way C# already
+writes one:
+
+```csharp
+Theo.Subtypes<Payment>()
+    .Case(Theo.Object<PixPayment>().Field(x => x.Key, Theo.String().NotEmpty()))
+    .Case(Theo.Object<CardPayment>().Field(x => x.Number, Theo.String().Length(16)));
+// a Pix with no key reads as Key: Informe pelo menos 1 caractere.
+```
+
+Zod reads a literal property here, because TypeScript erased the type and so the discriminator has
+to be data. In C# the discriminator *is* the type: `System.Text.Json` already chose which subtype to
+construct before any schema ran. So the branch is picked by a type test — faster than trying every
+alternative, and the error names the branch rather than saying the value was none of three things.
+
+A branch that no value could reach, because an earlier one already covers its type, is refused when
+the schema is built rather than left to silently never fire. Where the model is instead one flat
+class with a `Kind` property, `When` is the tool and nothing new is needed.
+
+**Two schemas can be required at once**, which is what a platform rule plus a tenant's extra rule
+looks like:
+
+```csharp
+Schema<string> both = PlatformRules.And(TenantRules);
+```
+
+Both see the same value and both report, so a caller sees every reason at once. That is an
+intersection; feeding one schema's result into the next is `Transform`, which says so in its type.
+
+**Formats for the things people actually type.** `Email()`, `Url()`, `Uuid()`, `Base64()`,
+`Base64Url()`, `Hex()`, `E164()`, `Iso8601()`, `Iso8601Date()`, `Ipv4()`, `Ipv6()`, `Cidr()`,
+`Hostname()`, `Jwt()`, `CreditCard()` and `Iban()`. Every pattern is a `[GeneratedRegex]` declared
+`NonBacktracking`, so matching is linear in the length of the input by construction and a hostile
+string cannot be made to cost anything — there is a test that tries.
+
+Four of them are not patterns at all, for two different reasons. `Ipv4()` and `Ipv6()` are hand-written
+scans over a span, because a pattern covering IPv6 needs an automaton of about two thousand two hundred
+states and the non-backtracking engine refuses to build one over a thousand — so the linear-time
+guarantee is simply not available for that shape. They turned out to be about five times faster than
+the patterns as well. `CreditCard()` and `Iban()` are checksums, Luhn and mod-97, which is the point:
+a pattern counts digits, while a checksum catches the single mistyped digit and the two transposed ones
+that people actually produce.
+
+Matching the specification is explicitly not the goal. `Url()` refuses `javascript:`, refuses
+credentials before the host, and refuses a single-label host, because a field labelled "website"
+that accepts the first is a vulnerability and the other two are mistakes. `Matches()` with your own
+pattern is the documented escape hatch.
+
+`Iso8601Date()` is not a pattern at all. A pattern can describe the shape of a date and cannot tell
+February from the number 31, so this one parses: `2026-02-31` fails.
+
+**Text can become a value, and the value can have rules.** The most ordinary pipeline there is:
+
+```csharp
+Schema<string, int> pageSize = Theo.String().Trim()
+    .TryTransform<int>(int.TryParse, "Must be a whole number.", Theo.Int().Min(1).Max(100));
+```
+
+A transformation used to have to be the last thing in a chain, which left every query parameter, form
+field and configuration value unsayable. `TryTransform` takes a conversion shaped like `TryParse` — so
+`int.TryParse` is handed over as it is, with no lambda around it — and reports a failed conversion
+instead of throwing. A failure after the conversion reports at the path the value *came from*, so a
+page size out of range is reported against `PageSize` and not against the number it became.
+
+**A rule can report for itself.** `Refine` with a predicate answers yes or no and produces one error.
+Where that is not enough — two distinct complaints, a failure that belongs against one property, a code
+a caller can branch on — the rule can be handed the parse instead:
+
+```csharp
+Theo.Object<SignUp>().Refine(static (SignUp signUp, ref ParseContext context) =>
+{
+    if (signUp.Password != signUp.PasswordConfirmation)
+    {
+        context.PushProperty(nameof(SignUp.PasswordConfirmation));
+        context.AddError(new ValidationErrorInfo { Code = ValidationErrorCode.Custom },
+                         "The two passwords do not match.");
+        context.Pop();
+    }
+});
+```
+
+**A value can stand in for an absent one.** `Default(x)` answers with `x` where the value was null;
+`Catch(x)` swallows a failure and answers with `x`; `Literal(x)` requires exactly `x`.
+
+```csharp
+var pageSize = Theo.Int().Min(1).Max(100).Default(20).Parse(query.PageSize);   // 20 when null
+```
+
+Both shape the value a parse *produces*, so they belong where that value is read. An object schema
+checks an instance rather than rebuilding one and never writes to it, so a default on a field would
+be computed and dropped — C# already has a property initializer for that, and it is better.
+
+**Schemas describe themselves.** A schema knows its types, its bounds and its formats, which is
+most of a JSON Schema document already:
+
+```csharp
+var document = Theo.Object<CreateUserRequest>()
+    .Field(x => x.Email, Theo.String().Email().Annotate(description: "Where we write to you."))
+    .Field(x => x.Age, Theo.Int().Min(18).Max(120))
+    .ToJsonSchema(new JsonSchemaOptions { Title = "CreateUserRequest" });
+
+Console.WriteLine(document.ToJsonString());
+```
+
+The dialect is JSON Schema 2020-12, which is the one OpenAPI 3.1 uses, so the result drops straight
+into an OpenAPI description. A recursive schema is written once under `$defs` and referred to by
+`$ref`. `Annotate` carries the title, description, example and deprecation that rules cannot express.
+
+What a document will never contain is a guess. A `Refine` is an arbitrary predicate with no keyword
+to map to, and a date range has no keyword that applies to a string, so both are left out: a
+document that omits a rule is incomplete, and one that states a rule nothing enforces is wrong.
+
+And you can ask to be told which ones. Where the document is the contract rather than the
+documentation — because the client generated from it will be the only thing checking — a silently
+missing rule is a rule nothing enforces:
+
+```csharp
+schema.ToJsonSchema(new JsonSchemaOptions { OnUnrepresentable = UnrepresentablePolicy.Throw });
+// Email: RefineCheck
+// CheckIn: a minimum bound, which has no keyword for a string
+```
+
+For an OpenAPI description, `ToJsonSchemaDocument` hands the shared schemas back rather than inlining
+them, so they can go in `components/schemas` where every operation can reach them. In ASP.NET Core,
+`.Validate(schema)` leaves the schema on the endpoint as metadata, so whatever produces the
+description can ask each endpoint what it actually requires instead of inferring a body from the
+handler signature. There is deliberately no document transformer in the box: the built-in OpenAPI
+pipeline arrived in .NET 9, this package also targets net8.0, and metadata serves every generator
+without committing to one.
+
 **Errors arrive in the shape you render.** Grouping a flat list by field is a loop every caller
 would otherwise write, and get subtly wrong at the root level:
 
@@ -153,6 +313,14 @@ return TypedResults.ValidationProblem(
 `ToTree()` gives the nested form instead, where each component receives the subtree for the value
 it is drawing and never parses a path string to find out whether something below it failed.
 Elements are keyed by index, so one bad row in two hundred costs one entry rather than two hundred.
+
+`ToPrettyString()` is the third shape, for the place where a person reads them and no structure
+helps — a log, a console, a failing test:
+
+```
+Name: Must be at least 3 character(s) long.
+Email: Invalid e-mail address.
+```
 
 **Rules that need a round trip can have one.** Whether an address is already registered is not a
 question the value can answer, and it is one of the most commonly needed validations there is:
@@ -171,6 +339,19 @@ that every existing schema joins for free. The rule runs only after everything b
 a malformed address never costs a database round trip — and a schema holding one refuses to be
 parsed synchronously rather than blocking a thread to hide the difference.
 
+**Durations, addresses and sets have schemas too.** `Theo.TimeSpan()` (whose `Positive()` catches
+two dates subtracted the wrong way round), `Theo.Uri()` for a value that already is one, and
+`Theo.Set()` for a `HashSet<T>` or an `IReadOnlySet<T>`. `Unique()` on a list reports each repeat at
+its own index, so a form can mark the row.
+
+A set reports a member's failure at the set's own path and never at an index: enumeration order is
+not stable, so `Tags[2]` would name a different member on the next run. It is also the one schema
+that allocates on the success path — exactly once, because walking a set through an interface boxes
+its enumerator and a set has no indexer to use instead.
+
+A tuple needs nothing new: `Theo.Object<(string Name, int Age)>()` already works, and so does a
+`char` — as `Theo.OneOf("...", Theo.Literal('Y'), Theo.Literal('N'))`.
+
 **Objects can be structs.** `Theo.Object<T>()` takes a class, a record, a struct or a record
 struct. A struct parses within noise of the equivalent class and neither allocates.
 
@@ -185,6 +366,12 @@ disagree by the machine's offset — into a validation failure at the boundary.
 dotnet add package Theon --prerelease
 dotnet add package Theon.AspNetCore --prerelease         # optional, for ASP.NET Core
 dotnet add package Theon.Localization.PtBr --prerelease  # optional, messages in Portuguese
+dotnet add package Theon.Localization.Es --prerelease    # optional, Spanish
+dotnet add package Theon.Localization.Fr --prerelease    # optional, French
+dotnet add package Theon.Localization.De --prerelease    # optional, German
+dotnet add package Theon.Localization.It --prerelease    # optional, Italian
+dotnet add package Theon.Localization.Nl --prerelease    # optional, Dutch
+dotnet add package Theon.Localization.Pl --prerelease    # optional, Polish
 ```
 
 `Theon.AspNetCore` is a separate package so the core keeps its promise of no dependencies: a worker
@@ -273,6 +460,15 @@ Idade: Deve ser maior ou igual a 18.
 A provider returns `null` for anything it does not describe, so it can cover the cases it cares
 about and let the rest fall through. Writing one for another language is one method over
 `ValidationErrorInfo` — no resource files, no satellite assemblies.
+
+Seven languages ship: Portuguese, Spanish, French, German, Italian, Dutch and Polish. Polish is the
+one that shows what the mechanism is worth — it has three plural forms, and which one a number takes
+depends on its last two digits, so twelve takes a different form from twenty-two. Nothing in the core
+changed to allow that, because a provider is a function from facts to a sentence and how it decides is
+entirely its own business.
+
+Every provider has a test asserting it answers for *every* error code and *every* format the library
+reports, so a new code cannot ship with half the languages quietly falling back to English.
 
 ## Design
 

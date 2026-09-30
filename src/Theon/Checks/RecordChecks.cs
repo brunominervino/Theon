@@ -1,4 +1,5 @@
 using Theon.Errors;
+using Theon.Metadata;
 
 namespace Theon.Checks;
 
@@ -6,6 +7,12 @@ internal sealed class RecordCountCheck<TKey, TValue>(int? minimum, int? maximum)
     : Check<IReadOnlyDictionary<TKey, TValue>>
     where TKey : notnull
 {
+    internal override void Describe(SchemaDescription description)
+    {
+        description.MinItems = minimum;
+        description.MaxItems = maximum;
+    }
+
     internal override void Run(ref ParseContext context, ref IReadOnlyDictionary<TKey, TValue> value)
     {
         var count = value.Count;

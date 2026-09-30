@@ -21,14 +21,29 @@ namespace Theon;
 /// </remarks>
 public sealed class AsyncParseContext
 {
-    private readonly List<PathSegment> _path = [];
+    private readonly List<PathSegment> _path;
     private List<ValidationError>? _errors;
 
     internal AsyncParseContext(ParseOptions options, CancellationToken cancellationToken)
     {
         Options = options;
         CancellationToken = cancellationToken;
+        _path = [];
     }
+
+    private AsyncParseContext(AsyncParseContext parent)
+    {
+        Options = parent.Options;
+        CancellationToken = parent.CancellationToken;
+        _path = [.. parent._path];
+    }
+
+    // The asynchronous counterpart of ParseContext.Fork: a private context that continues this
+    // parse's position but shares none of its errors, for an alternative being tried or a failure
+    // about to be swallowed. The path is copied here rather than skipped, because this context
+    // holds it in a list and copying it costs one allocation on a path that has already allocated a
+    // context and is about to await something.
+    internal AsyncParseContext Fork() => new(this);
 
     /// <summary>Gets the options this parse was started with.</summary>
     public ParseOptions Options { get; }

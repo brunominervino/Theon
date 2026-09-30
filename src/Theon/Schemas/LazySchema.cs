@@ -1,5 +1,7 @@
 using Theon.Errors;
 
+using Theon.Metadata;
+
 namespace Theon.Schemas;
 
 // Defers building the inner schema until the first parse, which is what makes a schema able to
@@ -11,6 +13,14 @@ namespace Theon.Schemas;
 // two graphs and waste the work of one.
 internal sealed class LazySchema<T>(Func<Schema<T>> factory) : Schema<T>
 {
+    // Where a cycle is found, because this is the only schema that can contain itself. The context
+    // recognises the repeat and writes a reference rather than descending again.
+    internal override SchemaDescription Describe(DescriptionContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        return context.Describe(_inner.Value);
+    }
+
     private readonly Lazy<Schema<T>> _inner = new(factory, LazyThreadSafetyMode.ExecutionAndPublication);
 
     public override bool TryParse(ref ParseContext context, T input, out T output)

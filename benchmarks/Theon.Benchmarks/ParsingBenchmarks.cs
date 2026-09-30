@@ -57,6 +57,71 @@ public class ParsingBenchmarks
                 .Field(x => x.CompletedAt, Theo.DateTime().RequireUtc().Required())
                 .Field(x => x.ClosedBy, Theo.String().NotEmpty().Required()));
 
+    private static readonly Schema<string> UrlString = Theo.String().Url();
+
+    private static readonly Schema<string> UuidString = Theo.String().Uuid();
+
+    private static readonly Schema<string> Iso8601String = Theo.String().Iso8601();
+
+    private static readonly Schema<int?, int> DefaultedInt = Theo.Int().Min(1).Max(100).Default(20);
+
+    private static readonly Schema<int, int> CaughtInt = Theo.Int().Min(1).Max(100).Catch(20);
+
+    private static readonly Schema<string> IntersectedString =
+        Theo.String().MaxLength(100).And(Theo.String().StartsWith("acme-"));
+
+    private static readonly Schema<Payment> Subtypes =
+        Theo.Subtypes<Payment>()
+            .Case(Theo.Object<PixPayment>()
+                .Field(x => x.Amount, Theo.Decimal().Positive())
+                .Field(x => x.Key, Theo.String().Email()))
+            .Case(Theo.Object<CardPayment>()
+                .Field(x => x.Amount, Theo.Decimal().Positive())
+                .Field(x => x.Number, Theo.String().Length(16))
+                .Field(x => x.Holder, Theo.String().NotEmpty()));
+
+    private static readonly Schema<IReadOnlyList<string>> UniqueTags =
+        Theo.Collection(Theo.String().MaxLength(24)).Unique();
+
+    // The one shape that cannot be walked without allocating: an interface has no struct enumerator
+    // to offer, and a set has no indexer to reach for instead. This benchmark exists to keep that
+    // cost visible, and to keep it at one allocation.
+    private static readonly Schema<IReadOnlyCollection<string>> TagSet =
+        Theo.Set(Theo.String().MaxLength(24)).MaxCount(20);
+
+    private static readonly Schema<string, int> PipelinedPageSize =
+        Theo.String().Trim().TryTransform<int>(
+            int.TryParse,
+            "Must be a whole number.",
+            Theo.Int().Min(1).Max(100));
+
+    // A rule that reports for itself rather than answering yes or no. It costs one delegating call on
+    // the success path; whether it costs an allocation is what this measures.
+    private static readonly Schema<string> ContextuallyRefined =
+        Theo.String().MinLength(3).Refine(static (string value, ref ParseContext context) =>
+        {
+            if (value.Contains(' ', StringComparison.Ordinal))
+            {
+                context.AddError(
+                    new Theon.Errors.ValidationErrorInfo { Code = Theon.Errors.ValidationErrorCode.Custom },
+                    "No spaces.");
+            }
+        });
+
+    // Two formats that are scans rather than patterns, because the non-backtracking engine will not
+    // build an automaton large enough for IPv6.
+    private static readonly Schema<string> Ipv4String = Theo.String().Ipv4();
+
+    private static readonly Schema<string> Ipv6String = Theo.String().Ipv6();
+
+    // Two that are checksums rather than shapes.
+    private static readonly Schema<string> CardNumber = Theo.String().CreditCard();
+
+    private static readonly Schema<string> IbanString = Theo.String().Iban();
+
+    private Payment _card = null!;
+    private HashSet<string> _tagSet = null!;
+    private string[] _tags = null!;
     private Ticket _conditionSkipped = null!;
     private Ticket _conditionMet = null!;
     private CreateUserValue _validStruct;
@@ -78,6 +143,17 @@ public class ParsingBenchmarks
         };
 
         _emails = [.. Enumerable.Range(0, 20).Select(i => $"user{i}@example.com")];
+
+        _tags = [.. Enumerable.Range(0, 10).Select(i => $"tag-{i}")];
+
+        _tagSet = [.. _tags];
+
+        _card = new CardPayment
+        {
+            Amount = 42.50m,
+            Number = "4111111111111111",
+            Holder = "Ada Lovelace",
+        };
 
         _conditionSkipped = new Ticket { Title = "open", Status = TicketStatus.Open };
 
@@ -161,4 +237,66 @@ public class ParsingBenchmarks
     [Benchmark]
     public bool DateTime_Valid() =>
         Timestamp.SafeParse(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)).IsSuccess;
+
+    [Benchmark]
+    public bool Format_Url_Valid() => UrlString.SafeParse("https://www.example.com/a/b?q=1").IsSuccess;
+
+    [Benchmark]
+    public bool Format_Uuid_Valid() =>
+        UuidString.SafeParse("6f0d6e0a-1b2c-4d5e-8f90-a1b2c3d4e5f6").IsSuccess;
+
+    // Not a regular expression: TryParseExact, so the calendar is checked and no pattern is added to
+    // the set that has to be kept linear.
+    [Benchmark]
+    public bool Format_Iso8601_Valid() => Iso8601String.SafeParse("2026-09-30T14:30:00Z").IsSuccess;
+
+    [Benchmark]
+    public bool Default_ValuePresent() => DefaultedInt.SafeParse(50).IsSuccess;
+
+    [Benchmark]
+    public bool Default_ValueAbsent() => DefaultedInt.SafeParse(null).IsSuccess;
+
+    // A caught failure runs the inner schema on a forked context, which is a stack struct, so the
+    // success path should cost nothing beyond the inner parse.
+    [Benchmark]
+    public bool Catch_Valid() => CaughtInt.SafeParse(50).IsSuccess;
+
+    [Benchmark]
+    public bool Catch_Swallowing() => CaughtInt.SafeParse(0).IsSuccess;
+
+    [Benchmark]
+    public bool Intersection_Valid() => IntersectedString.SafeParse("acme-widget").IsSuccess;
+
+    // The card branch is declared second, so this includes a type test that misses before the one
+    // that hits.
+    [Benchmark]
+    public bool Subtypes_SecondBranch_Valid() => Subtypes.SafeParse(_card).IsSuccess;
+
+    [Benchmark]
+    public bool Unique_10Tags_Valid() => UniqueTags.SafeParse(_tags).IsSuccess;
+
+    [Benchmark]
+    public bool Set_10Tags_Valid() => TagSet.SafeParse(_tagSet).IsSuccess;
+
+    [Benchmark]
+    public int Pipeline_TextToNumber_Valid() => PipelinedPageSize.SafeParse("50").Value;
+
+    [Benchmark]
+    public bool Pipeline_TextToNumber_NotANumber() =>
+        PipelinedPageSize.SafeParse("nope").IsSuccess;
+
+    [Benchmark]
+    public bool ContextualRefine_Valid() => ContextuallyRefined.SafeParse("no-spaces").IsSuccess;
+
+    [Benchmark]
+    public bool Format_Ipv4_Valid() => Ipv4String.SafeParse("192.168.100.200").IsSuccess;
+
+    [Benchmark]
+    public bool Format_Ipv6_Valid() => Ipv6String.SafeParse("2001:db8:85a3::8a2e:370:7334").IsSuccess;
+
+    [Benchmark]
+    public bool Format_CreditCard_Valid() => CardNumber.SafeParse("4111111111111111").IsSuccess;
+
+    [Benchmark]
+    public bool Format_Iban_Valid() => IbanString.SafeParse("DE89370400440532013000").IsSuccess;
 }

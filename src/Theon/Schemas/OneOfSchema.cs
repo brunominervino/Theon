@@ -1,5 +1,7 @@
 using Theon.Errors;
 
+using Theon.Metadata;
+
 namespace Theon.Schemas;
 
 // Accepts a value that satisfies any one of several schemas: an identifier that may be an e-mail
@@ -13,11 +15,25 @@ namespace Theon.Schemas;
 // in the form.
 internal sealed class OneOfSchema<T>(Schema<T>[] alternatives, string message) : Schema<T>
 {
+    internal override SchemaDescription Describe(DescriptionContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+
+        var description = new SchemaDescription { AnyOf = [] };
+
+        foreach (var alternative in alternatives)
+        {
+            description.AnyOf.Add(context.Describe(alternative));
+        }
+
+        return description;
+    }
+
     public override bool TryParse(ref ParseContext context, T input, out T output)
     {
         foreach (var alternative in alternatives)
         {
-            var attempt = new ParseContext(context.Options);
+            var attempt = context.Fork();
             if (alternative.TryParse(ref attempt, input, out var parsed) && !attempt.HasErrors)
             {
                 output = parsed;
@@ -38,7 +54,7 @@ internal sealed class OneOfSchema<T>(Schema<T>[] alternatives, string message) :
         {
             context.CancellationToken.ThrowIfCancellationRequested();
 
-            var attempt = new AsyncParseContext(context.Options, context.CancellationToken);
+            var attempt = context.Fork();
             var outcome = await alternative.TryParseAsync(attempt, input).ConfigureAwait(false);
 
             if (outcome.Succeeded && !attempt.HasErrors)

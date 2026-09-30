@@ -111,6 +111,43 @@ public static class Theo
     /// <summary>Starts a schema for a <see cref="System.TimeOnly"/>.</summary>
     public static TimeOnlySchema TimeOnly() => new(TimeProvider.System);
 
+    /// <summary>Starts a schema for a <see cref="System.TimeSpan"/>.</summary>
+    /// <remarks>
+    /// A duration rather than a point in time, so its bounds read like a number's. The rule worth
+    /// reaching for most often is <c>Positive()</c>: a <see cref="System.TimeSpan"/> can be negative,
+    /// and a negative one is usually two dates subtracted the wrong way round.
+    /// </remarks>
+    public static TimeSpanSchema TimeSpan() => new();
+
+    /// <summary>Starts a schema for a <see cref="System.Uri"/>.</summary>
+    /// <remarks>
+    /// For a value that already is a <see cref="System.Uri"/>. Where it is text that ought to be a web
+    /// address, <c>Theo.String().Url()</c> answers that question instead, and without constructing
+    /// anything.
+    /// </remarks>
+    public static UriSchema Uri() => new();
+
+    /// <summary>Starts a schema for a set, applying <paramref name="element"/> to each member.</summary>
+    /// <typeparam name="TElement">The element type.</typeparam>
+    /// <param name="element">The schema every member must satisfy.</param>
+    /// <remarks>
+    /// Binds a <see cref="HashSet{T}"/>, an <see cref="IReadOnlySet{T}"/>, a frozen set or an
+    /// immutable one. A member's failure is reported at the set's own path and not at an index,
+    /// because a set has no positions and its enumeration order is not something to report against.
+    /// Use <see cref="Collection"/> for a list, where an index means something and duplicates are
+    /// possible.
+    /// </remarks>
+    /// <example>
+    /// <code>
+    /// Theo.Set(Theo.String().Trim().MaxLength(24)).MaxCount(10);
+    /// </code>
+    /// </example>
+    public static SetSchema<TElement> Set<TElement>(Schema<TElement, TElement> element)
+    {
+        ArgumentNullException.ThrowIfNull(element);
+        return new SetSchema<TElement>(element);
+    }
+
     /// <summary>
     /// Defers building a schema until it is first used, so that it can refer to itself.
     /// </summary>
@@ -181,6 +218,73 @@ public static class Theo
     {
         ArgumentNullException.ThrowIfNull(value);
         return new RecordSchema<string, TValue>(new StringSchema(), value);
+    }
+
+    /// <summary>
+    /// Starts a schema for a closed hierarchy, dispatching on the value's own type.
+    /// </summary>
+    /// <typeparam name="TBase">The base type or interface every value belongs to.</typeparam>
+    /// <remarks>
+    /// <para>
+    /// A discriminated union. Zod's version reads a literal property, because TypeScript erased the
+    /// type and so the discriminator has to be data. In C# the discriminator is the type itself:
+    /// <c>System.Text.Json</c> already chose which subtype to construct before any schema ran, so the
+    /// branch is picked by a type test. Faster than trying each alternative, and the error names the
+    /// branch — "PixPayment: the key is missing" rather than "not any of the three".
+    /// </para>
+    /// <para>
+    /// Choose between the three tools by what actually differs. Different <em>types</em>: this. The
+    /// same type in different <em>shapes</em>, such as an identifier that may be an address or a phone
+    /// number: <see cref="OneOf"/>. One flat class with a <c>Kind</c> property and rules that depend
+    /// on it: <c>When</c>, which already does that and needs nothing new.
+    /// </para>
+    /// </remarks>
+    /// <example>
+    /// <code>
+    /// Theo.Subtypes&lt;Payment&gt;()
+    ///     .Case(Theo.Object&lt;PixPayment&gt;().Field(x =&gt; x.Key, Theo.String().NotEmpty()))
+    ///     .Case(Theo.Object&lt;CardPayment&gt;().Field(x =&gt; x.Number, Theo.String().Length(16)));
+    /// </code>
+    /// </example>
+    public static SubtypesSchema<TBase> Subtypes<TBase>()
+        where TBase : class => new();
+
+    /// <summary>Requires one exact value.</summary>
+    /// <typeparam name="T">The type of the value.</typeparam>
+    /// <param name="value">The only value this schema accepts.</param>
+    /// <param name="message">A message that replaces the default for this rule.</param>
+    /// <remarks>
+    /// <para>
+    /// The building block of a discriminated union, and useful on its own for a protocol version, a
+    /// fixed currency, an agreement a caller has to state rather than assume.
+    /// </para>
+    /// <para>
+    /// Equality is <see cref="EqualityComparer{T}.Default"/>, which for a <see cref="string"/> means
+    /// ordinal and case-sensitive. There is deliberately no comparer parameter: normalizing and then
+    /// comparing exactly is already how this library handles text, and
+    /// <c>ToLowerInvariant()</c> followed by a literal says in two rules what a hidden comparer would
+    /// only imply.
+    /// </para>
+    /// </remarks>
+    /// <example>
+    /// <code>
+    /// Theo.Literal("pix");
+    /// Theo.Literal(2, "This endpoint only speaks version 2.");
+    /// </code>
+    /// </example>
+    /// <exception cref="ArgumentNullException"><paramref name="value"/> was null.</exception>
+    public static Schema<T> Literal<T>(T value, string? message = null)
+    {
+        // Not ArgumentNullException.ThrowIfNull, which takes an object and would box a value type on
+        // every call. For a value type this comparison is a compile-time constant the JIT removes.
+        if (value is null)
+        {
+            throw new ArgumentNullException(
+                nameof(value),
+                "A literal needs a value. To accept null, use AllowNull.");
+        }
+
+        return new LiteralSchema<T>(value, message);
     }
 
     /// <summary>

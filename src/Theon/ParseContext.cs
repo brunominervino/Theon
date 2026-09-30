@@ -50,6 +50,21 @@ public ref struct ParseContext
         }
     }
 
+    private ParseContext(ParseOptions options, int depth)
+    {
+        Options = options;
+        _depth = depth;
+    }
+
+    // Starts a private context that continues this parse's depth but shares none of its errors.
+    // For a schema that runs a child and then decides whether to keep what it recorded: a choice
+    // between alternatives, or a failure swallowed by a fallback. Errors raised in the forked
+    // context are discarded along with it, so its path is never read and is not copied.
+    // The depth is copied, and that is the point. IsAtMaxDepth is measured from the context a
+    // schema is handed, so a fork that started over at zero would let a recursive schema inside it
+    // descend for ever and overflow the stack instead of reporting a depth it can name.
+    internal readonly ParseContext Fork() => new(Options, _depth);
+
     /// <summary>Gets the options this parse was started with.</summary>
     public ParseOptions Options { get; }
 

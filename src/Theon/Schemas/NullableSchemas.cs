@@ -1,3 +1,5 @@
+using Theon.Metadata;
+
 namespace Theon.Schemas;
 
 // Accepts null, and otherwise defers to an inner schema for a reference type.
@@ -7,6 +9,13 @@ namespace Theon.Schemas;
 internal sealed class NullableReferenceSchema<T>(Schema<T> inner) : Schema<T?>
     where T : class
 {
+    internal override SchemaDescription Describe(DescriptionContext context)
+    {
+        var described = context.Describe(inner);
+        described.AllowsNull = true;
+        return described;
+    }
+
     public override bool TryParse(ref ParseContext context, T? input, out T? output)
     {
         if (input is null)
@@ -37,6 +46,13 @@ internal sealed class NullableReferenceSchema<T>(Schema<T> inner) : Schema<T?>
 internal sealed class NullableValueSchema<T>(Schema<T> inner) : Schema<T?>
     where T : struct
 {
+    internal override SchemaDescription Describe(DescriptionContext context)
+    {
+        var described = context.Describe(inner);
+        described.AllowsNull = true;
+        return described;
+    }
+
     public override bool TryParse(ref ParseContext context, T? input, out T? output)
     {
         if (input is null)

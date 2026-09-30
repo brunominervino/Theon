@@ -1,10 +1,26 @@
 using Theon.Errors;
+using Theon.Metadata;
 
 namespace Theon.Checks;
 
-internal sealed class NotBeforeCheck<T>(T bound, bool inclusive) : Check<T>
+// The origin is a parameter rather than a constant because a TimeSpan uses these same two rules and
+// is not a point in time. "Must be later than 00:05:00" is wrong about a duration; "must be greater
+// than 00:05:00" is right, and that is the sentence the Number origin already asks providers for.
+internal sealed class NotBeforeCheck<T>(
+    T bound,
+    bool inclusive,
+    ValidationOrigin origin = ValidationOrigin.DateTime) : Check<T>
     where T : IComparable<T>
 {
+    // Recorded even though the dialect has no keyword for a date range, because the description is
+    // the library's own model and a later consumer may have somewhere to put it. The writer decides
+    // what survives into a document.
+    internal override void Describe(SchemaDescription description)
+    {
+        description.Minimum = bound;
+        description.ExclusiveMinimum = !inclusive;
+    }
+
     internal override void Run(ref ParseContext context, ref T value)
     {
         var comparison = value.CompareTo(bound);
@@ -17,7 +33,7 @@ internal sealed class NotBeforeCheck<T>(T bound, bool inclusive) : Check<T>
             new ValidationErrorInfo
             {
                 Code = ValidationErrorCode.TooSmall,
-                Origin = ValidationOrigin.DateTime,
+                Origin = origin,
                 Minimum = bound,
                 Inclusive = inclusive,
             },
@@ -25,9 +41,18 @@ internal sealed class NotBeforeCheck<T>(T bound, bool inclusive) : Check<T>
     }
 }
 
-internal sealed class NotAfterCheck<T>(T bound, bool inclusive) : Check<T>
+internal sealed class NotAfterCheck<T>(
+    T bound,
+    bool inclusive,
+    ValidationOrigin origin = ValidationOrigin.DateTime) : Check<T>
     where T : IComparable<T>
 {
+    internal override void Describe(SchemaDescription description)
+    {
+        description.Maximum = bound;
+        description.ExclusiveMaximum = !inclusive;
+    }
+
     internal override void Run(ref ParseContext context, ref T value)
     {
         var comparison = value.CompareTo(bound);
@@ -40,7 +65,7 @@ internal sealed class NotAfterCheck<T>(T bound, bool inclusive) : Check<T>
             new ValidationErrorInfo
             {
                 Code = ValidationErrorCode.TooBig,
-                Origin = ValidationOrigin.DateTime,
+                Origin = origin,
                 Maximum = bound,
                 Inclusive = inclusive,
             },

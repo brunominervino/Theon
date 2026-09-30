@@ -1,3 +1,5 @@
+using Theon.Metadata;
+
 namespace Theon.Schemas;
 
 // Binds one property of  to the schema that validates it.
@@ -11,6 +13,8 @@ internal abstract class FieldBinding<T>
     internal abstract void Run(ref ParseContext context, T instance);
 
     internal abstract ValueTask RunAsync(AsyncParseContext context, T instance);
+
+    internal abstract PropertyDescription Describe(DescriptionContext context);
 }
 
 // Reads one property through a plain delegate and validates it.
@@ -35,6 +39,15 @@ internal sealed class FieldBinding<T, TValue, TParsed>(
         context.PushProperty(name);
         schema.TryParse(ref context, accessor(instance), out _);
         context.Pop();
+    }
+
+    // Required is read off the child rather than declared here. This library never asks whether a
+    // key was present, so the only honest meaning of "required" in a document is that the schema
+    // refuses null, and the child is the one that knows.
+    internal override PropertyDescription Describe(DescriptionContext context)
+    {
+        var described = context.Describe(schema);
+        return new PropertyDescription(name, described, !described.AllowsNull);
     }
 
     internal override async ValueTask RunAsync(AsyncParseContext context, T instance)

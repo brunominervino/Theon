@@ -2,6 +2,7 @@ using System.Collections.Frozen;
 using System.Runtime.CompilerServices;
 using Theon.Checks;
 using Theon.Errors;
+using Theon.Metadata;
 
 namespace Theon.Schemas;
 
@@ -71,6 +72,26 @@ public sealed class EnumSchema<TEnum> : Schema<TEnum>
 
     /// <summary>Accepts <see langword="null"/> in addition to everything this schema accepts.</summary>
     public Schema<TEnum?> AllowNull() => new NullableValueSchema<TEnum>(this);
+
+    // Described as a string with an enumeration of member names, which assumes the value travels as
+    // its name. That is what a documented API does, and what JsonStringEnumConverter produces; a
+    // number on the wire would want the numeric values here instead. Naming the assumption beats
+    // having the document be silently right half the time.
+    //
+    // A flags enum gets no enumeration at all: the acceptable values are every combination of the
+    // declared bits, which is not a list worth writing down and is not what "enum" means in the
+    // dialect.
+    internal override SchemaDescription Describe(DescriptionContext context)
+    {
+        var description = CheckDescription.Of(SchemaKind.String, _checks);
+
+        if (!IsFlags)
+        {
+            description.AllowedValues = [.. Enum.GetNames<TEnum>()];
+        }
+
+        return description;
+    }
 
     /// <inheritdoc />
     public override bool TryParse(ref ParseContext context, TEnum input, out TEnum output)
