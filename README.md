@@ -106,6 +106,39 @@ Rules inside the block are ordinary rules, not presence checks: a `CompletedAt` 
 local still fails `RequireUtc()`. `Required()` is the counterpart to `AllowNull()` — it gives a
 `DateTime?` property a schema that refuses the null.
 
+**Schemas can refer to themselves.** A comment with replies, a category with subcategories, a tree
+of any shape:
+
+```csharp
+private static readonly Schema<Comment> CommentSchema =
+    Theo.Object<Comment>()
+        .Field(x => x.Body, Theo.String().NotEmpty())
+        .Field(x => x.Replies, Theo.Collection(Theo.Lazy(() => CommentSchema)));
+```
+
+A value that contains itself reports an error instead of overflowing the stack, which is not
+something a caller could have caught.
+
+**Dictionaries too**, for the shapes whose keys are data rather than structure — translations by
+language, prices by currency:
+
+```csharp
+Theo.Record(Theo.String().Length(3).Uppercase(), Theo.Decimal().Positive());
+// a bad price for BRL reads as Prices.BRL
+```
+
+**And alternatives**, when a field may take one of several forms:
+
+```csharp
+Theo.OneOf(
+    "Informe um e-mail ou um telefone.",
+    Theo.String().Email(),
+    Theo.String().Matches(PhoneNumber(), "phone"));
+```
+
+One message, not one per rejected branch: "not an e-mail, and not a phone number" is two
+complaints about a field where the reader wanted one.
+
 **Errors arrive in the shape you render.** Grouping a flat list by field is a loop every caller
 would otherwise write, and get subtly wrong at the root level:
 
@@ -150,7 +183,8 @@ disagree by the machine's offset — into a validation failure at the boundary.
 
 ```bash
 dotnet add package Theon --prerelease
-dotnet add package Theon.AspNetCore --prerelease   # optional, for ASP.NET Core
+dotnet add package Theon.AspNetCore --prerelease         # optional, for ASP.NET Core
+dotnet add package Theon.Localization.PtBr --prerelease  # optional, messages in Portuguese
 ```
 
 `Theon.AspNetCore` is a separate package so the core keeps its promise of no dependencies: a worker
@@ -219,6 +253,26 @@ in the same three lines — and the compiler checks the schema matches the type 
 
 Validation runs asynchronously, so a schema with a `RefineAsync` rule works here with no extra
 ceremony, and the request's cancellation token reaches it.
+
+## Messages in another language
+
+The core decides *what* went wrong; a provider decides how to say it. That is why no language is
+built in, and why adding one changes nothing in the core:
+
+```csharp
+// Once, at start-up:
+SchemaGlobalOptions.MessageProvider = BrazilianPortugueseMessages.Provider;
+```
+
+```
+Nome:  Informe pelo menos 3 caracteres.
+Email: E-mail inválido.
+Idade: Deve ser maior ou igual a 18.
+```
+
+A provider returns `null` for anything it does not describe, so it can cover the cases it cares
+about and let the rest fall through. Writing one for another language is one method over
+`ValidationErrorInfo` — no resource files, no satellite assemblies.
 
 ## Design
 

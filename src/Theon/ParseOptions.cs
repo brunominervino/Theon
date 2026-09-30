@@ -26,4 +26,20 @@ public sealed class ParseOptions
     /// matters, which lets large objects stop early.
     /// </remarks>
     public bool StopOnFirstError { get; init; }
+
+    /// <summary>
+    /// Gets the deepest nesting the parse will descend into before giving up.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Recursive schemas make unbounded depth reachable, and a value that refers to itself makes it
+    /// infinite. Without a limit that is a stack overflow, which cannot be caught and takes the
+    /// process down; with one it is an ordinary validation error.
+    /// </para>
+    /// <para>
+    /// The default of 64 is far beyond any hand-written object graph and far below anything that
+    /// threatens the stack.
+    /// </para>
+    /// </remarks>
+    public int MaxDepth { get; init; } = 64;
 }

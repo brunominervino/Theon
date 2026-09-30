@@ -53,6 +53,18 @@ public ref struct ParseContext
     /// <summary>Gets the options this parse was started with.</summary>
     public ParseOptions Options { get; }
 
+    /// <summary>Gets how deep into the value the parse currently is.</summary>
+    public readonly int Depth => _depth;
+
+    /// <summary>
+    /// Gets a value indicating whether the parse has descended as far as it is allowed to.
+    /// </summary>
+    /// <remarks>
+    /// A schema that can recurse should check this before descending, and report rather than
+    /// continue. See <see cref="ParseOptions.MaxDepth"/>.
+    /// </remarks>
+    public readonly bool IsAtMaxDepth => _depth >= Options.MaxDepth;
+
     /// <summary>Gets the number of errors recorded so far.</summary>
     public readonly int ErrorCount => _errors?.Count ?? 0;
 

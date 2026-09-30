@@ -40,6 +40,13 @@ public sealed class AsyncParseContext
     /// </remarks>
     public CancellationToken CancellationToken { get; }
 
+    /// <summary>Gets how deep into the value the parse currently is.</summary>
+    public int Depth => _path.Count;
+
+    /// <summary>Gets a value indicating whether the parse has descended as far as it is allowed to.</summary>
+    /// <inheritdoc cref="ParseContext.IsAtMaxDepth" path="/remarks"/>
+    public bool IsAtMaxDepth => _path.Count >= Options.MaxDepth;
+
     /// <summary>Gets the number of errors recorded so far.</summary>
     public int ErrorCount => _errors?.Count ?? 0;
 

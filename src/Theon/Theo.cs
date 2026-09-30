@@ -110,4 +110,115 @@ public static class Theo
 
     /// <summary>Starts a schema for a <see cref="System.TimeOnly"/>.</summary>
     public static TimeOnlySchema TimeOnly() => new(TimeProvider.System);
+
+    /// <summary>
+    /// Defers building a schema until it is first used, so that it can refer to itself.
+    /// </summary>
+    /// <typeparam name="T">The type being validated.</typeparam>
+    /// <param name="schema">Builds the schema. Runs once, on the first parse.</param>
+    /// <remarks>
+    /// <para>
+    /// A comment with replies, a category with subcategories, an expression with operands — any
+    /// shape that contains itself. Such a schema cannot be written directly, because the
+    /// declaration would have to name itself before it exists. This breaks the cycle by deferring.
+    /// </para>
+    /// <para>
+    /// Recursion makes unbounded depth reachable, and a value that refers to itself makes it
+    /// infinite, so a parse that descends past
+    /// <see cref="ParseOptions.MaxDepth"/> reports an error rather than overflowing the stack.
+    /// </para>
+    /// <para>
+    /// Have the factory hand back a schema that already exists rather than build a new one. Each
+    /// call to this method makes its own wrapper, so a factory that constructs from scratch builds
+    /// a fresh schema for every level of the value — correct, and wasteful on a deep one. Pointing
+    /// it at a static field costs one construction no matter how deep the value goes.
+    /// </para>
+    /// </remarks>
+    /// <example>
+    /// <code>
+    /// private static readonly Schema&lt;Comment&gt; CommentSchema =
+    ///     Theo.Object&lt;Comment&gt;()
+    ///         .Field(x =&gt; x.Body, Theo.String().NotEmpty())
+    ///         .Field(x =&gt; x.Replies, Theo.Collection(Theo.Lazy(() =&gt; CommentSchema)));
+    /// </code>
+    /// </example>
+    public static Schema<T> Lazy<T>(Func<Schema<T>> schema)
+    {
+        ArgumentNullException.ThrowIfNull(schema);
+        return new LazySchema<T>(schema);
+    }
+
+    /// <summary>
+    /// Starts a schema for a dictionary whose keys are data rather than structure.
+    /// </summary>
+    /// <typeparam name="TKey">The key type.</typeparam>
+    /// <typeparam name="TValue">The value type.</typeparam>
+    /// <param name="key">The schema every key must satisfy.</param>
+    /// <param name="value">The schema every value must satisfy.</param>
+    /// <example>
+    /// <code>
+    /// // Prices by currency code, where the codes are not known in advance.
+    /// Theo.Record(Theo.String().Length(3).Uppercase(), Theo.Decimal().Positive());
+    /// </code>
+    /// </example>
+    public static RecordSchema<TKey, TValue> Record<TKey, TValue>(
+        Schema<TKey, TKey> key,
+        Schema<TValue, TValue> value)
+        where TKey : notnull
+    {
+        ArgumentNullException.ThrowIfNull(key);
+        ArgumentNullException.ThrowIfNull(value);
+        return new RecordSchema<TKey, TValue>(key, value);
+    }
+
+    /// <summary>
+    /// Starts a schema for a dictionary keyed by <see cref="string"/>.
+    /// </summary>
+    /// <typeparam name="TValue">The value type.</typeparam>
+    /// <param name="value">The schema every value must satisfy.</param>
+    /// <remarks>Keys are accepted as they come; use the other overload to constrain them.</remarks>
+    public static RecordSchema<string, TValue> Record<TValue>(Schema<TValue, TValue> value)
+    {
+        ArgumentNullException.ThrowIfNull(value);
+        return new RecordSchema<string, TValue>(new StringSchema(), value);
+    }
+
+    /// <summary>
+    /// Accepts a value that satisfies any one of <paramref name="alternatives"/>.
+    /// </summary>
+    /// <typeparam name="T">The type being validated.</typeparam>
+    /// <param name="message">The message to report when none of them is satisfied.</param>
+    /// <param name="alternatives">The schemas to try, in order. The first to succeed wins.</param>
+    /// <remarks>
+    /// <para>
+    /// A single message is reported rather than the errors from each branch. "Not an e-mail, and
+    /// not a phone number" is two complaints about one field where the reader wanted one, and the
+    /// branch errors describe alternatives the caller never chose.
+    /// </para>
+    /// <para>
+    /// Each alternative is tried in isolation, so a failed attempt leaves nothing behind.
+    /// </para>
+    /// </remarks>
+    /// <example>
+    /// <code>
+    /// Theo.OneOf(
+    ///     "Enter an e-mail address or a phone number.",
+    ///     Theo.String().Email(),
+    ///     Theo.String().Matches(PhoneNumber(), "phone"));
+    /// </code>
+    /// </example>
+    public static Schema<T> OneOf<T>(string message, params Schema<T>[] alternatives)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(message);
+        ArgumentNullException.ThrowIfNull(alternatives);
+
+        if (alternatives.Length < 2)
+        {
+            throw new ArgumentException(
+                "A choice needs at least two alternatives; with one, use that schema directly.",
+                nameof(alternatives));
+        }
+
+        return new OneOfSchema<T>([.. alternatives], message);
+    }
 }

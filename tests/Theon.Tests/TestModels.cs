@@ -109,3 +109,16 @@ public sealed class Ticket
 
     public string? Resolution { get; set; }
 }
+
+public sealed class Comment
+{
+    public string Body { get; set; } = string.Empty;
+
+    public IReadOnlyList<Comment> Replies { get; set; } = [];
+}
+
+public sealed class Catalogue
+{
+    public IReadOnlyDictionary<string, decimal> Prices { get; set; } =
+        new Dictionary<string, decimal>();
+}
