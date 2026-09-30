@@ -106,6 +106,21 @@ Rules inside the block are ordinary rules, not presence checks: a `CompletedAt` 
 local still fails `RequireUtc()`. `Required()` is the counterpart to `AllowNull()` — it gives a
 `DateTime?` property a schema that refuses the null.
 
+**Errors arrive in the shape you render.** Grouping a flat list by field is a loop every caller
+would otherwise write, and get subtly wrong at the root level:
+
+```csharp
+var flat = result.Errors.Flatten();
+
+return TypedResults.ValidationProblem(
+    flat.ToDictionary().ToDictionary(p => p.Key, p => p.Value.ToArray()));
+// { "Email": ["Invalid e-mail address."], "Recipients[1]": ["..."] }
+```
+
+`ToTree()` gives the nested form instead, where each component receives the subtree for the value
+it is drawing and never parses a path string to find out whether something below it failed.
+Elements are keyed by index, so one bad row in two hundred costs one entry rather than two hundred.
+
 **Rules that need a round trip can have one.** Whether an address is already registered is not a
 question the value can answer, and it is one of the most commonly needed validations there is:
 
