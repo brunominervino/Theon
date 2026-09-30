@@ -19,6 +19,17 @@ internal sealed class NullableReferenceSchema<T>(Schema<T> inner) : Schema<T?>
         output = parsed;
         return succeeded;
     }
+
+    public override async ValueTask<ParseOutcome<T?>> TryParseAsync(AsyncParseContext context, T? input)
+    {
+        if (input is null)
+        {
+            return new ParseOutcome<T?>(true, null);
+        }
+
+        var outcome = await inner.TryParseAsync(context, input).ConfigureAwait(false);
+        return new ParseOutcome<T?>(outcome.Succeeded, outcome.Value);
+    }
 }
 
 // Accepts null, and otherwise defers to an inner schema for a value type.
@@ -37,5 +48,16 @@ internal sealed class NullableValueSchema<T>(Schema<T> inner) : Schema<T?>
         var succeeded = inner.TryParse(ref context, input.Value, out var parsed);
         output = parsed;
         return succeeded;
+    }
+
+    public override async ValueTask<ParseOutcome<T?>> TryParseAsync(AsyncParseContext context, T? input)
+    {
+        if (input is null)
+        {
+            return new ParseOutcome<T?>(true, null);
+        }
+
+        var outcome = await inner.TryParseAsync(context, input.Value).ConfigureAwait(false);
+        return new ParseOutcome<T?>(outcome.Succeeded, outcome.Value);
     }
 }

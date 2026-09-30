@@ -9,6 +9,8 @@ internal abstract class FieldBinding<T>
     internal abstract string Name { get; }
 
     internal abstract void Run(ref ParseContext context, T instance);
+
+    internal abstract ValueTask RunAsync(AsyncParseContext context, T instance);
 }
 
 // Reads one property through a plain delegate and validates it.
@@ -32,6 +34,13 @@ internal sealed class FieldBinding<T, TValue, TParsed>(
     {
         context.PushProperty(name);
         schema.TryParse(ref context, accessor(instance), out _);
+        context.Pop();
+    }
+
+    internal override async ValueTask RunAsync(AsyncParseContext context, T instance)
+    {
+        context.PushProperty(name);
+        await schema.TryParseAsync(context, accessor(instance)).ConfigureAwait(false);
         context.Pop();
     }
 }

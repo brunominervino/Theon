@@ -85,6 +85,74 @@ public sealed class CollectionSchema<TElement> : Schema<IReadOnlyList<TElement>>
 
     /// <inheritdoc />
     /// <remarks>
+    /// Elements are awaited in order, not in parallel. A list of twenty addresses each needing a
+    /// lookup should not become twenty simultaneous queries because the schema decided to be
+    /// clever, and ordered errors are what a caller can match back to the input.
+    /// </remarks>
+    public override async ValueTask<ParseOutcome<IReadOnlyList<TElement>>> TryParseAsync(
+        AsyncParseContext context,
+        IReadOnlyList<TElement> input)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+
+        var errorsBefore = context.ErrorCount;
+
+        if (input is null)
+        {
+            context.AddError(new ValidationErrorInfo
+            {
+                Code = ValidationErrorCode.InvalidType,
+                Expected = "a list",
+                Received = "null",
+            });
+
+            return new ParseOutcome<IReadOnlyList<TElement>>(false, Array.Empty<TElement>());
+        }
+
+        var value = input;
+        var sync = context.BeginSync();
+        try
+        {
+            foreach (var check in _checks)
+            {
+                if (sync.ShouldStop)
+                {
+                    break;
+                }
+
+                check.Run(ref sync, ref value);
+            }
+        }
+        finally
+        {
+            context.EndSync(ref sync);
+        }
+
+        if (context.ErrorCount != errorsBefore)
+        {
+            return new ParseOutcome<IReadOnlyList<TElement>>(false, Array.Empty<TElement>());
+        }
+
+        for (var i = 0; i < input.Count; i++)
+        {
+            if (context.ShouldStop)
+            {
+                break;
+            }
+
+            context.CancellationToken.ThrowIfCancellationRequested();
+            context.PushIndex(i);
+            await _element.TryParseAsync(context, input[i]).ConfigureAwait(false);
+            context.Pop();
+        }
+
+        return context.ErrorCount == errorsBefore
+            ? new ParseOutcome<IReadOnlyList<TElement>>(true, value)
+            : new ParseOutcome<IReadOnlyList<TElement>>(false, Array.Empty<TElement>());
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
     /// Count rules run before the elements. A list of the wrong length is a complaint about the
     /// list, and reporting it alongside a hundred element failures buries it.
     /// </remarks>

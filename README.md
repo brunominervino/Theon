@@ -106,6 +106,23 @@ Rules inside the block are ordinary rules, not presence checks: a `CompletedAt` 
 local still fails `RequireUtc()`. `Required()` is the counterpart to `AllowNull()` — it gives a
 `DateTime?` property a schema that refuses the null.
 
+**Rules that need a round trip can have one.** Whether an address is already registered is not a
+question the value can answer, and it is one of the most commonly needed validations there is:
+
+```csharp
+var schema = Theo.Object<SignUp>()
+    .Field(x => x.Email, Theo.String().Trim().Email()
+        .RefineAsync((email, ct) => users.IsAvailableAsync(email, ct),
+                     "That address is already registered."));
+
+var result = await schema.SafeParseAsync(request, cancellationToken: ct);
+```
+
+The synchronous path is untouched by this and still allocates nothing; asynchrony is a second path
+that every existing schema joins for free. The rule runs only after everything before it passed, so
+a malformed address never costs a database round trip — and a schema holding one refuses to be
+parsed synchronously rather than blocking a thread to hide the difference.
+
 **Objects can be structs.** `Theo.Object<T>()` takes a class, a record, a struct or a record
 struct. A struct parses within noise of the equivalent class and neither allocates.
 

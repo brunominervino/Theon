@@ -21,4 +21,14 @@ internal sealed class TransformSchema<TInput, TIntermediate, TOutput>(
         output = transform(intermediate);
         return true;
     }
+
+    public override async ValueTask<ParseOutcome<TOutput>> TryParseAsync(
+        AsyncParseContext context,
+        TInput input)
+    {
+        var outcome = await inner.TryParseAsync(context, input).ConfigureAwait(false);
+        return outcome.Succeeded
+            ? new ParseOutcome<TOutput>(true, transform(outcome.Value))
+            : new ParseOutcome<TOutput>(false, default!);
+    }
 }

@@ -38,6 +38,64 @@ public abstract class Schema<TInput, TOutput>
     [EditorBrowsable(EditorBrowsableState.Advanced)]
     public abstract bool TryParse(ref ParseContext context, TInput input, out TOutput output);
 
+    /// <summary>
+    /// Runs this schema asynchronously, recording any failures into <paramref name="context"/>.
+    /// </summary>
+    /// <param name="context">The parse in progress. Errors are recorded here.</param>
+    /// <param name="input">The value to parse.</param>
+    /// <remarks>
+    /// The default implementation runs the synchronous path, which is correct for every schema that
+    /// has no asynchronous rule in it — which is nearly all of them. A schema only overrides this
+    /// when it genuinely has to await something, and composite schemas override it to carry the
+    /// asynchrony through to their children.
+    /// </remarks>
+    [EditorBrowsable(EditorBrowsableState.Advanced)]
+    public virtual ValueTask<ParseOutcome<TOutput>> TryParseAsync(AsyncParseContext context, TInput input)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+
+        var succeeded = context.RunSynchronously(this, input, out var output);
+        return new ValueTask<ParseOutcome<TOutput>>(new ParseOutcome<TOutput>(succeeded, output));
+    }
+
+    /// <summary>
+    /// Parses <paramref name="input"/> asynchronously, throwing if it does not satisfy this schema.
+    /// </summary>
+    /// <param name="input">The value to parse.</param>
+    /// <param name="options">Options for this call, or <see langword="null"/> for the defaults.</param>
+    /// <param name="cancellationToken">Cancels any I/O the rules perform.</param>
+    /// <exception cref="SchemaValidationException">The value did not satisfy this schema.</exception>
+    public async ValueTask<TOutput> ParseAsync(
+        TInput input,
+        ParseOptions? options = null,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await SafeParseAsync(input, options, cancellationToken).ConfigureAwait(false);
+        return result.IsSuccess ? result.Value! : throw new SchemaValidationException(result.Errors);
+    }
+
+    /// <summary>
+    /// Parses <paramref name="input"/> asynchronously, returning the errors rather than throwing.
+    /// </summary>
+    /// <param name="input">The value to parse.</param>
+    /// <param name="options">Options for this call, or <see langword="null"/> for the defaults.</param>
+    /// <param name="cancellationToken">Cancels any I/O the rules perform.</param>
+    /// <remarks>
+    /// Safe to call on a schema with no asynchronous rules; it simply never awaits anything.
+    /// </remarks>
+    public async ValueTask<ParseResult<TOutput>> SafeParseAsync(
+        TInput input,
+        ParseOptions? options = null,
+        CancellationToken cancellationToken = default)
+    {
+        var context = new AsyncParseContext(options ?? ParseOptions.Default, cancellationToken);
+        var outcome = await TryParseAsync(context, input).ConfigureAwait(false);
+
+        return outcome.Succeeded && !context.HasErrors
+            ? new ParseResult<TOutput>(outcome.Value)
+            : new ParseResult<TOutput>(context.TakeErrors());
+    }
+
     /// <summary>Parses <paramref name="input"/>, throwing if it does not satisfy this schema.</summary>
     /// <param name="input">The value to parse.</param>
     /// <param name="options">Options for this call, or <see langword="null"/> for the defaults.</param>

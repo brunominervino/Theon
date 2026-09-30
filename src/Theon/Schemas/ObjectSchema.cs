@@ -252,6 +252,72 @@ public sealed class ObjectSchema<T> : Schema<T>
 
     /// <inheritdoc />
     /// <remarks>
+    /// Mirrors the synchronous order exactly, so a schema behaves the same whichever way it is
+    /// parsed. Fields are awaited one at a time rather than in parallel: running them together
+    /// would turn one slow lookup per request into several concurrent ones, and the errors are
+    /// reported in declaration order, which a caller can rely on.
+    /// </remarks>
+    public override async ValueTask<ParseOutcome<T>> TryParseAsync(AsyncParseContext context, T input)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+
+        var errorsBefore = context.ErrorCount;
+
+        if (input is null)
+        {
+            context.AddError(new ValidationErrorInfo
+            {
+                Code = ValidationErrorCode.InvalidType,
+                Expected = typeof(T).Name,
+                Received = "null",
+            });
+
+            return new ParseOutcome<T>(false, default!);
+        }
+
+        foreach (var field in _fields)
+        {
+            if (context.ShouldStop)
+            {
+                break;
+            }
+
+            context.CancellationToken.ThrowIfCancellationRequested();
+            await field.RunAsync(context, input).ConfigureAwait(false);
+        }
+
+        if (context.ErrorCount != errorsBefore)
+        {
+            return new ParseOutcome<T>(false, default!);
+        }
+
+        // Object-level rules are synchronous; borrow a context positioned at the current path.
+        var sync = context.BeginSync();
+        var value = input;
+        try
+        {
+            foreach (var check in _checks)
+            {
+                if (sync.ShouldStop)
+                {
+                    break;
+                }
+
+                check.Run(ref sync, ref value);
+            }
+        }
+        finally
+        {
+            context.EndSync(ref sync);
+        }
+
+        return context.ErrorCount == errorsBefore
+            ? new ParseOutcome<T>(true, value)
+            : new ParseOutcome<T>(false, default!);
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
     /// Object-level refinements run only once every field has validated. A rule comparing two
     /// properties is written against values that were supposed to be valid, and running it over
     /// values already known to be broken produces either a second, redundant complaint or a

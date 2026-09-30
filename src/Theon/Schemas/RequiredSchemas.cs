@@ -31,6 +31,26 @@ internal sealed class RequiredValueSchema<T>(Schema<T> inner, string? message) :
         output = parsed;
         return succeeded;
     }
+
+    public override async ValueTask<ParseOutcome<T?>> TryParseAsync(AsyncParseContext context, T? input)
+    {
+        if (input is null)
+        {
+            context.AddError(
+                new Errors.ValidationErrorInfo
+                {
+                    Code = Errors.ValidationErrorCode.InvalidType,
+                    Expected = typeof(T).Name,
+                    Received = "null",
+                },
+                message);
+
+            return new ParseOutcome<T?>(false, null);
+        }
+
+        var outcome = await inner.TryParseAsync(context, input.Value).ConfigureAwait(false);
+        return new ParseOutcome<T?>(outcome.Succeeded, outcome.Value);
+    }
 }
 
 // Rejects null for a reference type, and otherwise defers to an inner schema.
@@ -62,5 +82,25 @@ internal sealed class RequiredReferenceSchema<T>(Schema<T> inner, string? messag
         var succeeded = inner.TryParse(ref context, input, out var parsed);
         output = parsed;
         return succeeded;
+    }
+
+    public override async ValueTask<ParseOutcome<T?>> TryParseAsync(AsyncParseContext context, T? input)
+    {
+        if (input is null)
+        {
+            context.AddError(
+                new Errors.ValidationErrorInfo
+                {
+                    Code = Errors.ValidationErrorCode.InvalidType,
+                    Expected = typeof(T).Name,
+                    Received = "null",
+                },
+                message);
+
+            return new ParseOutcome<T?>(false, null);
+        }
+
+        var outcome = await inner.TryParseAsync(context, input).ConfigureAwait(false);
+        return new ParseOutcome<T?>(outcome.Succeeded, outcome.Value);
     }
 }

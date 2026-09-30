@@ -39,6 +39,17 @@ public ref struct ParseContext
         _depth = 0;
     }
 
+    internal ParseContext(ParseOptions options, ReadOnlySpan<PathSegment> basePath)
+    {
+        Options = options;
+        _depth = 0;
+
+        foreach (var segment in basePath)
+        {
+            Push(segment);
+        }
+    }
+
     /// <summary>Gets the options this parse was started with.</summary>
     public ParseOptions Options { get; }
 
@@ -135,6 +146,13 @@ public ref struct ParseContext
         }
 
         return new ValidationPath(segments);
+    }
+
+    internal List<ValidationError>? DrainErrors()
+    {
+        var errors = _errors;
+        _errors = null;
+        return errors;
     }
 
     internal IReadOnlyList<ValidationError> TakeErrors()
