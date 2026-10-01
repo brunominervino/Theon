@@ -17,7 +17,8 @@ internal sealed class AsyncRefinedSchema<T>(
 {
     // An asynchronous refinement is still a refinement: an arbitrary predicate, with no keyword to
     // map it to. The inner schema's shape is the whole of what can be said.
-    internal override SchemaDescription Describe(DescriptionContext context) => context.Describe(inner);
+    /// <inheritdoc />
+    public override SchemaDescription Describe(DescriptionContext context) => context.Describe(inner);
 
     public override bool TryParse(ref ParseContext context, T input, out T output) =>
         throw new SchemaAsyncUsageException();

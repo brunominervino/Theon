@@ -315,12 +315,48 @@ public abstract class Schema<TInput, TOutput>
         return new Schemas.AnnotatedSchema<TInput, TOutput>(this, title, description, example, deprecated);
     }
 
-    // Reifies this schema's structure, so that a document can be generated without asking what kind
-    // of schema it is holding. The default says nothing, which is the honest answer for a schema this
-    // assembly does not know: the hook is internal, so a custom schema from elsewhere cannot describe
-    // itself, and a document that omits a constraint is incomplete where one that invents a type
-    // would be wrong.
-    internal virtual SchemaDescription Describe(DescriptionContext context) =>
+    /// <summary>
+    /// Reifies this schema's structure, so that a document can be generated without asking what kind of
+    /// schema it is holding.
+    /// </summary>
+    /// <param name="context">The description in progress. Describe children through it.</param>
+    /// <returns>What this schema says about itself.</returns>
+    /// <remarks>
+    /// <para>
+    /// The second extension point for a custom schema, after <see cref="TryParse"/>. A schema that does
+    /// not override this says nothing about itself, and a document generated for it constrains nothing —
+    /// which is honest, and useless. Override it and <c>ToJsonSchema</c> describes your schema as well as
+    /// it describes the built-in ones.
+    /// </para>
+    /// <para>
+    /// Describe a child through <see cref="DescriptionContext.Describe"/> and never by calling its
+    /// <c>Describe</c> directly: the context is what recognises a schema that contains itself, and
+    /// without it such a schema runs until the stack ends.
+    /// </para>
+    /// <para>
+    /// Say nothing rather than guessing. A rule with no keyword in the target format contributes
+    /// nothing, because a document that omits a rule is incomplete and one that states a rule nothing
+    /// enforces is wrong. Record such a rule in
+    /// <see cref="SchemaDescription.Unrepresentable"/> so that a caller who asked to be told can be.
+    /// </para>
+    /// <para>
+    /// Describing is a start-up or tooling operation and never happens on a parse, so it may allocate
+    /// freely.
+    /// </para>
+    /// </remarks>
+    /// <example>
+    /// <code>
+    /// public override SchemaDescription Describe(DescriptionContext context) => new()
+    /// {
+    ///     Kind = SchemaKind.String,
+    ///     Format = "ulid",
+    ///     MinLength = 26,
+    ///     MaxLength = 26,
+    /// };
+    /// </code>
+    /// </example>
+    [EditorBrowsable(EditorBrowsableState.Advanced)]
+    public virtual SchemaDescription Describe(DescriptionContext context) =>
         new() { Kind = SchemaKind.Unknown };
 
     private static readonly ParseOptions FailFastOptions = new() { StopOnFirstError = true };

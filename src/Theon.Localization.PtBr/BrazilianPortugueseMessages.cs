@@ -77,6 +77,10 @@ public static class BrazilianPortugueseMessages
         ValidationOrigin.DateTime => error.Inclusive
             ? Format($"Deve ser igual ou posterior a {error.Minimum}.")
             : Format($"Deve ser posterior a {error.Minimum}."),
+        ValidationOrigin.Bytes => Plural(
+            error.Minimum,
+            "Deve ocupar pelo menos 1 byte.",
+            $"Deve ocupar pelo menos {error.Minimum} bytes."),
         _ => error.Inclusive
             ? Format($"Deve ser maior ou igual a {error.Minimum}.")
             : Format($"Deve ser maior que {error.Minimum}."),
@@ -95,6 +99,10 @@ public static class BrazilianPortugueseMessages
         ValidationOrigin.DateTime => error.Inclusive
             ? Format($"Deve ser igual ou anterior a {error.Maximum}.")
             : Format($"Deve ser anterior a {error.Maximum}."),
+        ValidationOrigin.Bytes => Plural(
+            error.Maximum,
+            "Deve ocupar no máximo 1 byte.",
+            $"Deve ocupar no máximo {error.Maximum} bytes."),
         _ => error.Inclusive
             ? Format($"Deve ser menor ou igual a {error.Maximum}.")
             : Format($"Deve ser menor que {error.Maximum}."),
@@ -122,6 +130,10 @@ public static class BrazilianPortugueseMessages
         "jwt" => "Token inválido.",
         "credit_card" => "Número de cartão inválido.",
         "iban" => "IBAN inválido.",
+        "iso8601_time" => "Hora inválida.",
+        "iso8601_duration" => "Duração inválida.",
+        "content_type" => Format($"O tipo deve ser um destes: {error.Expected}."),
+        "file_extension" => Format($"A extensão deve ser uma destas: {error.Expected}."),
         "regex" => "Formato inválido.",
         "starts_with" => Format($"Deve começar com {error.Expected}."),
         "ends_with" => Format($"Deve terminar com {error.Expected}."),

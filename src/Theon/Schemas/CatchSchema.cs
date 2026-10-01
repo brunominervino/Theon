@@ -15,20 +15,44 @@ namespace Theon.Schemas;
 internal sealed class CatchSchema<TInput, TOutput>(Schema<TInput, TOutput> inner, TOutput fallback)
     : Schema<TInput, TOutput>
 {
-    // Describes the inner shape, and records the fallback as the default.
+    // On the input side, the inner shape with the fallback recorded as the default.
     //
-    // This is the one description that is stricter than the schema: a caught schema accepts anything,
-    // so a document faithful to that would say "anything" and tell a reader nothing about what to
-    // send. The intended shape plus the value they get when they miss it is the more useful pair, and
-    // "default" is an annotation rather than an assertion, so nothing here claims to be enforced.
-    internal override SchemaDescription Describe(DescriptionContext context)
+    // This is the one input description that is stricter than the schema: a caught schema accepts
+    // anything, so a document faithful to that would say "anything" and tell a reader nothing about
+    // what to send. The intended shape plus the value they get when they miss it is the more useful
+    // pair, and "default" is an annotation rather than an assertion, so nothing here claims to be
+    // enforced.
+    //
+    // On the output side the opposite happens, and the output side is the more precise of the two. A
+    // caught schema always produces a valid value, but "valid" means either something the inner
+    // schema accepted or the fallback -- and a fallback the inner schema would have rejected is the
+    // interesting case. Theo.String().Email().Catch("none") really does produce "none", and a
+    // response document that claimed to produce only e-mail addresses would be wrong rather than
+    // incomplete. The dialect can say this exactly, so it does.
+    /// <inheritdoc />
+    public override SchemaDescription Describe(DescriptionContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
 
         var described = context.Describe(inner);
-        described.DefaultValue = fallback;
-        described.HasDefaultValue = true;
-        return described;
+
+        if (context.Direction == DescriptionDirection.Output)
+        {
+            return new SchemaDescription
+            {
+                AnyOf =
+                [
+                    described,
+                    new SchemaDescription { ConstantValue = fallback, HasConstantValue = true },
+                ],
+            };
+        }
+
+        return new SchemaDescription(described)
+        {
+            DefaultValue = fallback,
+            HasDefaultValue = true,
+        };
     }
 
     public override bool TryParse(ref ParseContext context, TInput input, out TOutput output)

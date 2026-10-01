@@ -77,6 +77,10 @@ public static class SpanishMessages
         ValidationOrigin.DateTime => error.Inclusive
             ? Format($"Debe ser igual o posterior a {error.Minimum}.")
             : Format($"Debe ser posterior a {error.Minimum}."),
+        ValidationOrigin.Bytes => Plural(
+            error.Minimum,
+            "Debe ocupar al menos 1 byte.",
+            $"Debe ocupar al menos {error.Minimum} bytes."),
         _ => error.Inclusive
             ? Format($"Debe ser mayor o igual que {error.Minimum}.")
             : Format($"Debe ser mayor que {error.Minimum}."),
@@ -95,6 +99,10 @@ public static class SpanishMessages
         ValidationOrigin.DateTime => error.Inclusive
             ? Format($"Debe ser igual o anterior a {error.Maximum}.")
             : Format($"Debe ser anterior a {error.Maximum}."),
+        ValidationOrigin.Bytes => Plural(
+            error.Maximum,
+            "Debe ocupar como máximo 1 byte.",
+            $"Debe ocupar como máximo {error.Maximum} bytes."),
         _ => error.Inclusive
             ? Format($"Debe ser menor o igual que {error.Maximum}.")
             : Format($"Debe ser menor que {error.Maximum}."),
@@ -120,6 +128,10 @@ public static class SpanishMessages
         "jwt" => "Token no válido.",
         "credit_card" => "Número de tarjeta no válido.",
         "iban" => "IBAN no válido.",
+        "iso8601_time" => "Hora no válida.",
+        "iso8601_duration" => "Duración no válida.",
+        "content_type" => Format($"El tipo debe ser uno de estos: {error.Expected}."),
+        "file_extension" => Format($"La extensión debe ser una de estas: {error.Expected}."),
         "regex" => "Formato no válido.",
         "starts_with" => Format($"Debe empezar por {error.Expected}."),
         "ends_with" => Format($"Debe terminar en {error.Expected}."),

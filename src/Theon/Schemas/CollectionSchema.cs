@@ -110,13 +110,14 @@ public sealed class CollectionSchema<TElement> : Schema<IReadOnlyList<TElement>>
     public Schema<IReadOnlyList<TElement>?> AllowNull() =>
         new NullableReferenceSchema<IReadOnlyList<TElement>>(this);
 
-    internal override SchemaDescription Describe(DescriptionContext context)
+    /// <inheritdoc />
+    public override SchemaDescription Describe(DescriptionContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        var description = CheckDescription.Of(SchemaKind.Array, _checks);
+        var description = CheckDescription.Build(SchemaKind.Array, _checks);
         description.Items = context.Describe(_element);
-        return description;
+        return description.ToDescription();
     }
 
     /// <inheritdoc />

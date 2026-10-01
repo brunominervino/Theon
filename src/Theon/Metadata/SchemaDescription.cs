@@ -1,104 +1,208 @@
 namespace Theon.Metadata;
 
-// What kind of JSON value a schema accepts.
-// Deliberately coarse. A Guid, a DateTime and an e-mail address are all strings as far as a JSON
-// document is concerned, and what distinguishes them is the format, not the kind.
-internal enum SchemaKind
+/// <summary>
+/// The reified structure of a schema: everything a generated document needs to know about it.
+/// </summary>
+/// <remarks>
+/// <para>
+/// This exists so that generating a document does not have to ask what kind of schema it is holding. A
+/// switch over schema types is what this library refuses in shared code, and a document generator is
+/// where that temptation is strongest. Instead each schema answers with one of these, each rule
+/// decorates it, and whatever writes the document switches over a data model rather than over schema
+/// identity.
+/// </para>
+/// <para>
+/// Immutable. Build one with an object initializer, and build a variant of one with the copy
+/// constructor — which is what a wrapper schema does when it has one thing to change about the schema
+/// it wraps:
+/// </para>
+/// <code>
+/// public override SchemaDescription Describe(DescriptionContext context) =>
+///     new(context.Describe(inner)) { AllowsNull = true };
+/// </code>
+/// <para>
+/// Describing allocates freely. A description is produced when a document is generated, which happens
+/// at start-up or in a tool and never on a parse, so the allocation rules that govern the rest of this
+/// library do not apply here and are deliberately not applied.
+/// </para>
+/// </remarks>
+/// <seealso cref="Schema{TInput, TOutput}.Describe"/>
+public sealed class SchemaDescription
 {
-    // The schema did not describe itself. A custom schema from another assembly cannot override the
-    // description hook, and a document generated for one has to say "anything" rather than guess.
-    Unknown,
-    String,
-    Integer,
-    Number,
-    Boolean,
-    Object,
-    Array,
-    Map,
-}
+    /// <summary>Initializes a new, empty instance of the <see cref="SchemaDescription"/> class.</summary>
+    /// <remarks>
+    /// An empty description constrains nothing, which is the honest answer for a schema that has
+    /// nothing to say about itself.
+    /// </remarks>
+    public SchemaDescription()
+    {
+    }
 
-// One property of an object, as it appears in a description.
-// Required is derived rather than declared: this library never checks whether a key was present —
-// the type system settled that before parsing began — so the only thing "required" can honestly
-// mean in a generated document is that the schema refuses null.
-internal sealed record PropertyDescription(string Name, SchemaDescription Schema, bool IsRequired);
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SchemaDescription"/> class as a copy of another.
+    /// </summary>
+    /// <param name="other">The description to copy.</param>
+    /// <remarks>
+    /// For changing one thing about a description something else produced, which is what every wrapper
+    /// schema does. The children are shared rather than copied, which is safe because they are
+    /// immutable too.
+    /// </remarks>
+    public SchemaDescription(SchemaDescription other)
+    {
+        ArgumentNullException.ThrowIfNull(other);
 
-// The reified structure of a schema: everything a generated document needs to know about it.
-//
-// This exists so that generating a document does not have to ask what kind of schema it is holding.
-// A switch over schema types is exactly what this repository refuses in shared code, and a document
-// generator is where that temptation is strongest, because the TypeScript library it takes its ideas
-// from is written that way. Instead each schema answers with one of these, each rule decorates it,
-// and the writer switches over a data model we own and can extend without touching a parse path.
-//
-// Mutable, and built up in place, because a description is produced once when a document is
-// generated rather than on any parse. Nothing here is shared between calls.
-internal sealed class SchemaDescription
-{
-    internal SchemaKind Kind { get; set; }
+        Kind = other.Kind;
+        Reference = other.Reference;
+        Format = other.Format;
+        Pattern = other.Pattern;
+        ContentMediaType = other.ContentMediaType;
+        MinLength = other.MinLength;
+        MaxLength = other.MaxLength;
+        Minimum = other.Minimum;
+        Maximum = other.Maximum;
+        ExclusiveMinimum = other.ExclusiveMinimum;
+        ExclusiveMaximum = other.ExclusiveMaximum;
+        MultipleOf = other.MultipleOf;
+        MinItems = other.MinItems;
+        MaxItems = other.MaxItems;
+        UniqueItems = other.UniqueItems;
+        AllowsNull = other.AllowsNull;
+        Items = other.Items;
+        AdditionalProperties = other.AdditionalProperties;
+        Properties = other.Properties;
+        AnyOf = other.AnyOf;
+        AllOf = other.AllOf;
+        AllowedValues = other.AllowedValues;
+        ConstantValue = other.ConstantValue;
+        HasConstantValue = other.HasConstantValue;
+        Title = other.Title;
+        Description = other.Description;
+        Example = other.Example;
+        IsDeprecated = other.IsDeprecated;
+        DefaultValue = other.DefaultValue;
+        HasDefaultValue = other.HasDefaultValue;
+        Unrepresentable = other.Unrepresentable;
+    }
 
-    // Set instead of everything else when this node stands in for a schema described elsewhere in
-    // the document, which is how a recursive schema is written down without recursing for ever.
-    internal string? Reference { get; set; }
+    /// <summary>Gets what kind of value the schema accepts.</summary>
+    public SchemaKind Kind { get; init; }
 
-    internal string? Format { get; set; }
+    /// <summary>Gets the reference this node stands in for, if it stands in for one.</summary>
+    /// <remarks>
+    /// Set instead of everything else when the schema is described elsewhere in the document, which is
+    /// how a recursive schema is written down without recursing for ever. A generator that sees this
+    /// should emit a reference and nothing beside it but annotations.
+    /// </remarks>
+    public string? Reference { get; init; }
 
-    internal string? Pattern { get; set; }
+    /// <summary>Gets the name of the format the value must match, such as <c>email</c>.</summary>
+    public string? Format { get; init; }
 
-    internal int? MinLength { get; set; }
+    /// <summary>Gets the regular expression the value must match.</summary>
+    public string? Pattern { get; init; }
 
-    internal int? MaxLength { get; set; }
+    /// <summary>Gets the media type of the content the value carries.</summary>
+    /// <remarks>
+    /// For a value that is not text but travels where text would — an uploaded file in a multipart
+    /// request, say. Distinct from <see cref="Format"/>, which names a shape the text itself has.
+    /// </remarks>
+    public string? ContentMediaType { get; init; }
 
-    internal object? Minimum { get; set; }
+    /// <summary>Gets the shortest the text may be, in Unicode code points.</summary>
+    public int? MinLength { get; init; }
 
-    internal object? Maximum { get; set; }
+    /// <summary>Gets the longest the text may be, in Unicode code points.</summary>
+    public int? MaxLength { get; init; }
 
-    internal bool ExclusiveMinimum { get; set; }
+    /// <summary>Gets the lower bound on the value.</summary>
+    /// <remarks>
+    /// Boxed, because a bound preserves the caller's exact numeric type rather than flattening
+    /// everything to <see cref="double"/> and losing <see cref="decimal"/> and <see cref="long"/>
+    /// precision.
+    /// </remarks>
+    public object? Minimum { get; init; }
 
-    internal bool ExclusiveMaximum { get; set; }
+    /// <summary>Gets the upper bound on the value.</summary>
+    /// <inheritdoc cref="Minimum" path="/remarks"/>
+    public object? Maximum { get; init; }
 
-    internal object? MultipleOf { get; set; }
+    /// <summary>Gets a value indicating whether <see cref="Minimum"/> is itself disallowed.</summary>
+    public bool ExclusiveMinimum { get; init; }
 
-    internal int? MinItems { get; set; }
+    /// <summary>Gets a value indicating whether <see cref="Maximum"/> is itself disallowed.</summary>
+    public bool ExclusiveMaximum { get; init; }
 
-    internal int? MaxItems { get; set; }
+    /// <summary>Gets the divisor the value must be an exact multiple of.</summary>
+    /// <inheritdoc cref="Minimum" path="/remarks"/>
+    public object? MultipleOf { get; init; }
 
-    internal bool UniqueItems { get; set; }
+    /// <summary>Gets the fewest entries the value may have.</summary>
+    public int? MinItems { get; init; }
 
-    internal bool AllowsNull { get; set; }
+    /// <summary>Gets the most entries the value may have.</summary>
+    public int? MaxItems { get; init; }
 
-    internal SchemaDescription? Items { get; set; }
+    /// <summary>Gets a value indicating whether the entries must all differ.</summary>
+    public bool UniqueItems { get; init; }
 
-    internal SchemaDescription? AdditionalProperties { get; set; }
+    /// <summary>Gets a value indicating whether <see langword="null"/> is accepted.</summary>
+    public bool AllowsNull { get; init; }
 
-    internal List<PropertyDescription>? Properties { get; set; }
+    /// <summary>Gets the description every entry of a list must satisfy.</summary>
+    public SchemaDescription? Items { get; init; }
 
-    internal List<SchemaDescription>? AnyOf { get; set; }
+    /// <summary>Gets the description every value of a map must satisfy.</summary>
+    public SchemaDescription? AdditionalProperties { get; init; }
 
-    internal List<SchemaDescription>? AllOf { get; set; }
+    /// <summary>Gets the named properties of an object.</summary>
+    public IReadOnlyList<PropertyDescription>? Properties { get; init; }
 
-    internal List<object?>? AllowedValues { get; set; }
+    /// <summary>Gets the alternatives the value must satisfy at least one of.</summary>
+    public IReadOnlyList<SchemaDescription>? AnyOf { get; init; }
 
-    internal object? ConstantValue { get; set; }
+    /// <summary>Gets the descriptions the value must satisfy all of.</summary>
+    public IReadOnlyList<SchemaDescription>? AllOf { get; init; }
 
-    internal bool HasConstantValue { get; set; }
+    /// <summary>Gets the values the value must be one of.</summary>
+    public IReadOnlyList<object?>? AllowedValues { get; init; }
 
-    internal string? Title { get; set; }
+    /// <summary>Gets the single value the schema accepts, when it accepts only one.</summary>
+    /// <remarks>
+    /// Read it with <see cref="HasConstantValue"/>, since <see langword="null"/> is a value a schema
+    /// can legitimately require.
+    /// </remarks>
+    public object? ConstantValue { get; init; }
 
-    internal string? Description { get; set; }
+    /// <summary>Gets a value indicating whether <see cref="ConstantValue"/> was set.</summary>
+    public bool HasConstantValue { get; init; }
 
-    internal object? Example { get; set; }
+    /// <summary>Gets a short name for the value.</summary>
+    public string? Title { get; init; }
 
-    internal bool IsDeprecated { get; set; }
+    /// <summary>Gets a sentence or two about what the value means.</summary>
+    public string? Description { get; init; }
 
-    // The rules this description could not express, by the name of the rule that could not be
-    // expressed. Kept rather than discarded so that a caller can ask to be told: a document silently
-    // missing a constraint is the failure mode this list exists to make visible.
-    internal List<string>? Unrepresentable { get; set; }
+    /// <summary>Gets a value worth showing a reader.</summary>
+    public object? Example { get; init; }
 
-    internal void CannotRepresent(string rule) => (Unrepresentable ??= []).Add(rule);
+    /// <summary>Gets a value indicating whether callers should stop using the value.</summary>
+    public bool IsDeprecated { get; init; }
 
-    internal object? DefaultValue { get; set; }
+    /// <summary>Gets the value produced when the input is <see langword="null"/>.</summary>
+    /// <remarks>
+    /// Read it with <see cref="HasDefaultValue"/>. A default is an annotation and not an assertion: it
+    /// tells a reader what happens without claiming anything will enforce it.
+    /// </remarks>
+    public object? DefaultValue { get; init; }
 
-    internal bool HasDefaultValue { get; set; }
+    /// <summary>Gets a value indicating whether <see cref="DefaultValue"/> was set.</summary>
+    public bool HasDefaultValue { get; init; }
+
+    /// <summary>Gets the rules this description could not express, named after each rule.</summary>
+    /// <remarks>
+    /// Kept rather than discarded, so that a caller can ask to be told. A document silently missing a
+    /// constraint is the failure mode this list exists to make visible: a document that omits a rule is
+    /// incomplete, and one that states a rule nothing enforces is wrong.
+    /// </remarks>
+    public IReadOnlyList<string>? Unrepresentable { get; init; }
 }

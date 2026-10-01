@@ -15,18 +15,19 @@ namespace Theon.Schemas;
 // in the form.
 internal sealed class OneOfSchema<T>(Schema<T>[] alternatives, string message) : Schema<T>
 {
-    internal override SchemaDescription Describe(DescriptionContext context)
+    /// <inheritdoc />
+    public override SchemaDescription Describe(DescriptionContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        var description = new SchemaDescription { AnyOf = [] };
+        var branches = new List<SchemaDescription>(alternatives.Length);
 
         foreach (var alternative in alternatives)
         {
-            description.AnyOf.Add(context.Describe(alternative));
+            branches.Add(context.Describe(alternative));
         }
 
-        return description;
+        return new SchemaDescription { AnyOf = branches };
     }
 
     public override bool TryParse(ref ParseContext context, T input, out T output)

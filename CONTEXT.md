@@ -15,11 +15,22 @@ model or a DTO. It describes; it does not contain.
 
 ## Theo
 
-The static factory every schema is built from: `Theo.String()`, `Theo.Object<T>()`, `Theo.Int()`.
+The static factory every schema the core can know about is built from: `Theo.String()`,
+`Theo.Object<T>()`, `Theo.Int()`. See **Upload** for the one exception and why it has to exist.
 
 It is named after the maintainer's son, which is also why the package and namespace are `Theon`.
 Not `T`: a type named `T` is shadowed by the type parameter inside any generic that follows the
 usual convention, and the call then fails to compile.
+
+## Upload
+
+A file arriving in a multipart form request, and the subject of the second factory.
+
+`Upload.File()` and `Upload.Files()` live in `Theon.AspNetCore`, because `IFormFile` is an ASP.NET Core
+type and the core package has no dependencies. So **`Theo` is the factory for every schema the core can
+know about**, and `Upload` is the factory for the one it cannot. We say **upload** for the thing and
+`Upload` for the factory; never `FormFile`, which is already a type in `Microsoft.AspNetCore.Http` and
+would collide. See `docs/decisions/0015-a-second-factory-for-uploaded-files.md`.
 
 ## Rule
 
@@ -97,6 +108,21 @@ of schema it is holding.
 
 A description is not a schema and does not validate. It is what a schema says about itself.
 
+The model is public, and immutable. A schema produces one by overriding `Describe`, and anything that
+reads one — the JSON Schema writer, or a generator somebody else writes — reads a data model this
+project owns rather than asking what kind of schema it is holding. See
+`docs/decisions/0014-the-description-model-becomes-public.md`.
+
+## Direction
+
+Which side of a schema a description describes: what it **accepts**, or what it **produces**.
+
+Only a schema that transforms has two sides worth telling apart, and those are the ones worth
+describing carefully: a request body is the input side and a response body is the output side. We say
+**direction**, and **input** and **output** for the two values; never "request" and "response", which
+name one use of the distinction rather than the distinction. See
+`docs/decisions/0012-a-description-has-a-direction.md`.
+
 ## Annotation
 
 Documentation attached to a schema — a title, a sentence, an example, a note that it is deprecated.
@@ -110,6 +136,26 @@ prose and they are read by different people at different times.
 
 A generated JSON Schema, in the 2020-12 dialect. Produced from a description, never from a schema
 directly.
+
+## Amendment
+
+A caller-supplied function that may change one node of a generated document after it has been
+written, and may declare that it has expressed what the document could not.
+
+An amendment is the escape hatch for the rule only the caller can state — a refinement whose meaning
+is a pattern this library has no way to discover. We say **amendment**, never "override", which in
+C# means virtual dispatch and not this. See
+`docs/decisions/0013-an-amendment-for-what-a-document-cannot-say.md`.
+
+## Published document
+
+A JSON Schema somebody else wrote, read back into a schema with `Theo.JsonSchema`.
+
+The reverse of **document**, and for a different job: checking a payload against a description this
+program did not author. What comes back validates a `JsonNode` and never produces a typed object,
+which is what keeps it on the right side of
+`docs/decisions/0001-validate-materialized-values.md`. See
+`docs/decisions/0016-reading-a-document-back-into-a-schema.md`.
 
 ## Message provider
 

@@ -60,6 +60,10 @@ public static class DutchMessages
         ValidationOrigin.DateTime => error.Inclusive
             ? Format($"Moet gelijk zijn aan of na {error.Minimum} liggen.")
             : Format($"Moet na {error.Minimum} liggen."),
+        ValidationOrigin.Bytes => Plural(
+            error.Minimum,
+            "Moet minstens 1 byte groot zijn.",
+            $"Moet minstens {error.Minimum} bytes groot zijn."),
         _ => error.Inclusive
             ? Format($"Moet groter dan of gelijk aan {error.Minimum} zijn.")
             : Format($"Moet groter dan {error.Minimum} zijn."),
@@ -78,6 +82,10 @@ public static class DutchMessages
         ValidationOrigin.DateTime => error.Inclusive
             ? Format($"Moet gelijk zijn aan of voor {error.Maximum} liggen.")
             : Format($"Moet voor {error.Maximum} liggen."),
+        ValidationOrigin.Bytes => Plural(
+            error.Maximum,
+            "Mag maximaal 1 byte groot zijn.",
+            $"Mag maximaal {error.Maximum} bytes groot zijn."),
         _ => error.Inclusive
             ? Format($"Moet kleiner dan of gelijk aan {error.Maximum} zijn.")
             : Format($"Moet kleiner dan {error.Maximum} zijn."),
@@ -103,6 +111,10 @@ public static class DutchMessages
         "jwt" => "Ongeldig token.",
         "credit_card" => "Ongeldig kaartnummer.",
         "iban" => "Ongeldige IBAN.",
+        "iso8601_time" => "Ongeldige tijd.",
+        "iso8601_duration" => "Ongeldige duur.",
+        "content_type" => Format($"Het type moet een van deze zijn: {error.Expected}."),
+        "file_extension" => Format($"De bestandsextensie moet een van deze zijn: {error.Expected}."),
         "regex" => "Ongeldige indeling.",
         "starts_with" => Format($"Moet beginnen met {error.Expected}."),
         "ends_with" => Format($"Moet eindigen op {error.Expected}."),

@@ -119,18 +119,19 @@ public sealed class SubtypesSchema<TBase> : Schema<TBase>
     // A union of types becomes a union of schemas. anyOf and not oneOf: the branch is chosen by type
     // here, so at most one can ever match, and oneOf would ask a validator to prove the others fail to
     // reach an answer it already has.
-    internal override SchemaDescription Describe(DescriptionContext context)
+    /// <inheritdoc />
+    public override SchemaDescription Describe(DescriptionContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        var description = new SchemaDescription { AnyOf = [] };
+        var branches = new List<SchemaDescription>(_cases.Length);
 
         foreach (var branch in _cases)
         {
-            description.AnyOf.Add(branch.Describe(context));
+            branches.Add(branch.Describe(context));
         }
 
-        return description;
+        return new SchemaDescription { AnyOf = branches };
     }
 
     /// <inheritdoc />

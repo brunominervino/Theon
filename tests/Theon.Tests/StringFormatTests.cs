@@ -344,6 +344,104 @@ public class StringFormatTests
     public void Iso8601Date_Rejects_Other_Shapes(string value) =>
         Assert.False(Theo.String().Iso8601Date().IsValid(value));
 
+    [Theory]
+    [InlineData("14:30:00")]
+    [InlineData("00:00:00")]
+    [InlineData("23:59:59")]
+    [InlineData("14:30")]
+    [InlineData("14:30:00.123")]
+    [InlineData("14:30:00.1234567")]
+    public void Iso8601Time_Accepts_Times_Of_Day(string value) =>
+        Assert.True(Theo.String().Iso8601Time().IsValid(value));
+
+    // The clock is checked, not just the shape.
+    [Theory]
+    [InlineData("24:00:00")]
+    [InlineData("14:60:00")]
+    [InlineData("14:30:60")]
+    public void Iso8601Time_Checks_The_Clock(string value) =>
+        Assert.False(Theo.String().Iso8601Time().IsValid(value));
+
+    // No offset: a TimeOnly has nowhere to put one, and a time of day that carries an offset is a
+    // DateTimeOffset rather than a time.
+    [Theory]
+    [InlineData("")]
+    [InlineData("2:30:00")]
+    [InlineData("14:30:00Z")]
+    [InlineData("14:30:00+01:00")]
+    [InlineData("14-30-00")]
+    public void Iso8601Time_Rejects_Other_Shapes(string value) =>
+        Assert.False(Theo.String().Iso8601Time().IsValid(value));
+
+    [Theory]
+    [InlineData("P1D")]
+    [InlineData("PT5S")]
+    [InlineData("P1Y2M3DT4H5M6S")]
+    [InlineData("PT1H30M")]
+    [InlineData("P1DT1H")]
+    [InlineData("P10Y")]
+    [InlineData("P1M")]
+    [InlineData("PT1M")]
+    [InlineData("P3W")]
+    public void Iso8601Duration_Accepts_Durations(string value) =>
+        Assert.True(Theo.String().Iso8601Duration().IsValid(value));
+
+    // A fraction on any component rather than only the last, because producers vary and PT0.5H is not
+    // a typo.
+    [Theory]
+    [InlineData("PT0.5S")]
+    [InlineData("PT1,5S")]
+    [InlineData("PT0.5H")]
+    public void Iso8601Duration_Accepts_A_Fraction(string value) =>
+        Assert.True(Theo.String().Iso8601Duration().IsValid(value));
+
+    // The ordering and the one-of-each rule are what a looser check would miss: P and M mean months
+    // before the T and minutes after it, so the same letter is two different units.
+    [Theory]
+    [InlineData("PT1D")]
+    [InlineData("P1H")]
+    [InlineData("P1S")]
+    [InlineData("P1M2Y")]
+    [InlineData("PT1S1S")]
+    public void Iso8601Duration_Enforces_The_Order_And_One_Of_Each(string value) =>
+        Assert.False(Theo.String().Iso8601Duration().IsValid(value));
+
+    // A count of weeks cannot be combined with anything else.
+    [Fact]
+    public void Iso8601Duration_Keeps_The_Week_Form_On_Its_Own()
+    {
+        Assert.True(Theo.String().Iso8601Duration().IsValid("P3W"));
+        Assert.False(Theo.String().Iso8601Duration().IsValid("P3W1D"));
+        Assert.False(Theo.String().Iso8601Duration().IsValid("P1DT3W"));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("P")]
+    [InlineData("PT")]
+    [InlineData("1D")]
+    [InlineData("P1X")]
+    [InlineData("P1DT")]
+    [InlineData("PS")]
+    [InlineData("P1.D")]
+    [InlineData("PT.5S")]
+    public void Iso8601Duration_Rejects_Anything_Else(string value) =>
+        Assert.False(Theo.String().Iso8601Duration().IsValid(value));
+
+    // A negative duration in a configuration value is a mistake rather than an intention, so the sign
+    // the specification permits is refused.
+    [Fact]
+    public void Iso8601Duration_Refuses_A_Leading_Sign() =>
+        Assert.False(Theo.String().Iso8601Duration().IsValid("-P1D"));
+
+    // This is not the form .NET writes for a TimeSpan, and the two rules do not overlap.
+    [Fact]
+    public void Iso8601Duration_And_TimeSpan_Describe_Different_Things()
+    {
+        Assert.False(Theo.String().Iso8601Duration().IsValid("00:00:05"));
+        Assert.True(Theo.TimeSpan().IsValid(TimeSpan.FromSeconds(5)));
+    }
+
     [Fact]
     public void Iso8601_Reports_Its_Format_Names()
     {

@@ -10,7 +10,7 @@ namespace Theon.Checks;
 // and no pattern can compute it.
 internal sealed class CreditCardCheck : Check<string>
 {
-    internal override void Describe(SchemaDescription description)
+    internal override void Describe(SchemaDescriptionBuilder description)
     {
         description.Format = "credit-card";
         description.CannotRepresent("CreditCard");
@@ -75,7 +75,7 @@ internal sealed class CreditCardCheck : Check<string>
 // of allocation, which a Substring and a concatenation would not.
 internal sealed class IbanCheck : Check<string>
 {
-    internal override void Describe(SchemaDescription description)
+    internal override void Describe(SchemaDescriptionBuilder description)
     {
         description.Format = "iban";
         description.CannotRepresent("Iban");

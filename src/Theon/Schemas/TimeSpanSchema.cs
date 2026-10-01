@@ -79,7 +79,8 @@ public sealed class TimeSpanSchema : Schema<TimeSpan>
     /// <summary>Accepts <see langword="null"/> in addition to everything this schema accepts.</summary>
     public Schema<TimeSpan?> AllowNull() => new NullableValueSchema<TimeSpan>(this);
 
-    internal override SchemaDescription Describe(DescriptionContext context) =>
+    /// <inheritdoc />
+    public override SchemaDescription Describe(DescriptionContext context) =>
         CheckDescription.Of(SchemaKind.String, _checks);
 
     /// <inheritdoc />

@@ -13,7 +13,7 @@ internal sealed class AbsoluteUriCheck : Check<Uri>
 
     // A Uri schema describes itself as uri-reference, which is the format that admits a relative
     // address. Requiring an absolute one narrows that to uri.
-    internal override void Describe(SchemaDescription description) => description.Format = "uri";
+    internal override void Describe(SchemaDescriptionBuilder description) => description.Format = "uri";
 
     internal override void Run(ref ParseContext context, ref Uri value)
     {

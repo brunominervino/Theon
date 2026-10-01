@@ -252,19 +252,21 @@ public sealed class ObjectSchema<T> : Schema<T>
         return new ObjectSchema<T>(_fields, [.. _checks, new ConditionalSchemaCheck<T>(condition, inner)]);
     }
 
-    internal override SchemaDescription Describe(DescriptionContext context)
+    /// <inheritdoc />
+    public override SchemaDescription Describe(DescriptionContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        var description = CheckDescription.Of(SchemaKind.Object, _checks);
-        description.Properties = [];
+        var description = CheckDescription.Build(SchemaKind.Object, _checks);
+        var properties = new List<PropertyDescription>(_fields.Length);
 
         foreach (var field in _fields)
         {
-            description.Properties.Add(field.Describe(context));
+            properties.Add(field.Describe(context));
         }
 
-        return description;
+        description.Properties = properties;
+        return description.ToDescription();
     }
 
     /// <inheritdoc />

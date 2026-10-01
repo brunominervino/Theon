@@ -16,17 +16,37 @@ internal sealed class TryTransformSchema<TInput, TIntermediate, TOutput>(
     string message,
     Schema<TOutput>? then) : Schema<TInput, TOutput>
 {
-    internal override SchemaDescription Describe(DescriptionContext context)
+    /// <inheritdoc />
+    public override SchemaDescription Describe(DescriptionContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        var described = context.Describe(inner);
+        if (context.Direction == DescriptionDirection.Output)
+        {
+            return DescribeOutput(context);
+        }
 
-        // A document says what the caller sends, which is the input side. The conversion and anything
-        // checked after it constrain what this program made of that, and there is no keyword for
-        // "the number this text parses to is between one and a hundred".
-        described.CannotRepresent(then is null ? "TryTransform" : "TryTransform and its follow-on rules");
-        return described;
+        // The input side is what the caller sends. The conversion and anything checked after it
+        // constrain what this program made of that, and there is no keyword for "the number this text
+        // parses to is between one and a hundred".
+        return context.Describe(inner)
+            .CannotRepresent(then is null ? "TryTransform" : "TryTransform and its follow-on rules");
+    }
+
+    // The same reasoning as TransformSchema: with a follow-on schema the converted side describes
+    // itself completely, and without one there is only the type it converted to.
+    private SchemaDescription DescribeOutput(DescriptionContext context)
+    {
+        if (then is not null)
+        {
+            return context.Describe(then);
+        }
+
+        return new SchemaDescription
+        {
+            Kind = SchemaKinds.For(typeof(TOutput)),
+            Unrepresentable = ["the output of TryTransform, which is a type and not a schema"],
+        };
     }
 
     public override bool TryParse(ref ParseContext context, TInput input, out TOutput output)

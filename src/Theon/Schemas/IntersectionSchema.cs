@@ -13,7 +13,8 @@ namespace Theon.Schemas;
 // scanning the chain sees first. A schema that normalizes therefore belongs on the left.
 internal sealed class IntersectionSchema<T>(Schema<T> left, Schema<T> right) : Schema<T>
 {
-    internal override SchemaDescription Describe(DescriptionContext context)
+    /// <inheritdoc />
+    public override SchemaDescription Describe(DescriptionContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
 

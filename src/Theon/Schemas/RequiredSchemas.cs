@@ -14,7 +14,13 @@ internal sealed class RequiredValueSchema<T>(Schema<T> inner, string? message) :
 {
     // The nullable shape refuses the null, so nothing about the description changes: a document says
     // "this may not be null" by leaving null out of the type and by naming the property as required.
-    internal override SchemaDescription Describe(DescriptionContext context) => context.Describe(inner);
+    //
+    // The same on both sides, which is worth saying because it looks as though it should not be. The
+    // declared output type is T?, so the reflex is that the output may be null -- but the only way a
+    // null leaves here is a parse that failed, and a description describes the values a parse succeeds
+    // with. Fixed by test in DescriptionDirectionTests.
+    /// <inheritdoc />
+    public override SchemaDescription Describe(DescriptionContext context) => context.Describe(inner);
 
     public override bool TryParse(ref ParseContext context, T? input, out T? output)
     {
@@ -68,7 +74,8 @@ internal sealed class RequiredValueSchema<T>(Schema<T> inner, string? message) :
 internal sealed class RequiredReferenceSchema<T>(Schema<T> inner, string? message) : Schema<T?>
     where T : class
 {
-    internal override SchemaDescription Describe(DescriptionContext context) => context.Describe(inner);
+    /// <inheritdoc />
+    public override SchemaDescription Describe(DescriptionContext context) => context.Describe(inner);
 
     public override bool TryParse(ref ParseContext context, T? input, out T? output)
     {

@@ -47,7 +47,8 @@ public sealed class GuidSchema : Schema<Guid>
     /// <summary>Accepts <see langword="null"/> in addition to everything this schema accepts.</summary>
     public Schema<Guid?> AllowNull() => new NullableValueSchema<Guid>(this);
 
-    internal override SchemaDescription Describe(DescriptionContext context) =>
+    /// <inheritdoc />
+    public override SchemaDescription Describe(DescriptionContext context) =>
         CheckDescription.Of(SchemaKind.String, _checks, "uuid");
 
     /// <inheritdoc />

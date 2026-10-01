@@ -5,7 +5,7 @@ namespace Theon.Checks;
 
 internal sealed class Ipv4Check : Check<string>
 {
-    internal override void Describe(SchemaDescription description) => description.Format = "ipv4";
+    internal override void Describe(SchemaDescriptionBuilder description) => description.Format = "ipv4";
 
     internal override void Run(ref ParseContext context, ref string value)
     {
@@ -27,7 +27,7 @@ internal sealed class Ipv4Check : Check<string>
 
 internal sealed class Ipv6Check : Check<string>
 {
-    internal override void Describe(SchemaDescription description) => description.Format = "ipv6";
+    internal override void Describe(SchemaDescriptionBuilder description) => description.Format = "ipv6";
 
     internal override void Run(ref ParseContext context, ref string value)
     {
@@ -52,7 +52,7 @@ internal sealed class Ipv6Check : Check<string>
 // same scanners the two address rules use. A pattern would have had to restate both of them.
 internal sealed class CidrCheck : Check<string>
 {
-    internal override void Describe(SchemaDescription description)
+    internal override void Describe(SchemaDescriptionBuilder description)
     {
         // Not a format the dialect knows, so this is an annotation rather than something a validator
         // will check -- which is exactly what format means in 2020-12 unless asked otherwise. Recorded

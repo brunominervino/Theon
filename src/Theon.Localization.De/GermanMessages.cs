@@ -76,6 +76,10 @@ public static class GermanMessages
         ValidationOrigin.DateTime => error.Inclusive
             ? Format($"Muss gleich oder nach {error.Minimum} liegen.")
             : Format($"Muss nach {error.Minimum} liegen."),
+        ValidationOrigin.Bytes => Plural(
+            error.Minimum,
+            "Muss mindestens 1 Byte groß sein.",
+            $"Muss mindestens {error.Minimum} Bytes groß sein."),
         _ => error.Inclusive
             ? Format($"Muss größer oder gleich {error.Minimum} sein.")
             : Format($"Muss größer als {error.Minimum} sein."),
@@ -91,6 +95,10 @@ public static class GermanMessages
         ValidationOrigin.DateTime => error.Inclusive
             ? Format($"Muss gleich oder vor {error.Maximum} liegen.")
             : Format($"Muss vor {error.Maximum} liegen."),
+        ValidationOrigin.Bytes => Plural(
+            error.Maximum,
+            "Darf höchstens 1 Byte groß sein.",
+            $"Darf höchstens {error.Maximum} Bytes groß sein."),
         _ => error.Inclusive
             ? Format($"Muss kleiner oder gleich {error.Maximum} sein.")
             : Format($"Muss kleiner als {error.Maximum} sein."),
@@ -116,6 +124,10 @@ public static class GermanMessages
         "jwt" => "Ungültiges Token.",
         "credit_card" => "Ungültige Kartennummer.",
         "iban" => "Ungültige IBAN.",
+        "iso8601_time" => "Ungültige Uhrzeit.",
+        "iso8601_duration" => "Ungültige Dauer.",
+        "content_type" => Format($"Der Typ muss einer von diesen sein: {error.Expected}."),
+        "file_extension" => Format($"Die Dateiendung muss eine von diesen sein: {error.Expected}."),
         "regex" => "Ungültiges Format.",
         "starts_with" => Format($"Muss mit {error.Expected} beginnen."),
         "ends_with" => Format($"Muss mit {error.Expected} enden."),

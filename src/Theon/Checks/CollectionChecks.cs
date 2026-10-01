@@ -10,7 +10,7 @@ namespace Theon.Checks;
 internal sealed class MinCountCheck<TCollection, TElement>(int minimum) : Check<TCollection>
     where TCollection : IReadOnlyCollection<TElement>
 {
-    internal override void Describe(SchemaDescription description) =>
+    internal override void Describe(SchemaDescriptionBuilder description) =>
         description.MinItems = minimum;
 
     internal override void Run(ref ParseContext context, ref TCollection value)
@@ -35,7 +35,7 @@ internal sealed class MinCountCheck<TCollection, TElement>(int minimum) : Check<
 internal sealed class MaxCountCheck<TCollection, TElement>(int maximum) : Check<TCollection>
     where TCollection : IReadOnlyCollection<TElement>
 {
-    internal override void Describe(SchemaDescription description) =>
+    internal override void Describe(SchemaDescriptionBuilder description) =>
         description.MaxItems = maximum;
 
     internal override void Run(ref ParseContext context, ref TCollection value)
@@ -60,7 +60,7 @@ internal sealed class MaxCountCheck<TCollection, TElement>(int maximum) : Check<
 internal sealed class ExactCountCheck<TCollection, TElement>(int count) : Check<TCollection>
     where TCollection : IReadOnlyCollection<TElement>
 {
-    internal override void Describe(SchemaDescription description)
+    internal override void Describe(SchemaDescriptionBuilder description)
     {
         description.MinItems = count;
         description.MaxItems = count;
@@ -103,7 +103,7 @@ internal sealed class ExactCountCheck<TCollection, TElement>(int count) : Check<
 // thousand elements against each other.
 internal sealed class UniqueCheck<T>(int pairwiseLimit = 32) : Check<IReadOnlyList<T>>
 {
-    internal override void Describe(SchemaDescription description) =>
+    internal override void Describe(SchemaDescriptionBuilder description) =>
         description.UniqueItems = true;
 
     internal override void Run(ref ParseContext context, ref IReadOnlyList<T> value)

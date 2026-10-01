@@ -78,6 +78,10 @@ public static class FrenchMessages
         ValidationOrigin.DateTime => error.Inclusive
             ? Format($"Doit être égal ou postérieur à {error.Minimum}.")
             : Format($"Doit être postérieur à {error.Minimum}."),
+        ValidationOrigin.Bytes => Plural(
+            error.Minimum,
+            "Doit faire au moins 1 octet.",
+            $"Doit faire au moins {error.Minimum} octets."),
         _ => error.Inclusive
             ? Format($"Doit être supérieur ou égal à {error.Minimum}.")
             : Format($"Doit être supérieur à {error.Minimum}."),
@@ -96,6 +100,10 @@ public static class FrenchMessages
         ValidationOrigin.DateTime => error.Inclusive
             ? Format($"Doit être égal ou antérieur à {error.Maximum}.")
             : Format($"Doit être antérieur à {error.Maximum}."),
+        ValidationOrigin.Bytes => Plural(
+            error.Maximum,
+            "Doit faire au maximum 1 octet.",
+            $"Doit faire au maximum {error.Maximum} octets."),
         _ => error.Inclusive
             ? Format($"Doit être inférieur ou égal à {error.Maximum}.")
             : Format($"Doit être inférieur à {error.Maximum}."),
@@ -121,6 +129,10 @@ public static class FrenchMessages
         "jwt" => "Jeton non valide.",
         "credit_card" => "Numéro de carte non valide.",
         "iban" => "IBAN non valide.",
+        "iso8601_time" => "Heure non valide.",
+        "iso8601_duration" => "Durée non valide.",
+        "content_type" => Format($"Le type doit être l'un de ceux-ci : {error.Expected}."),
+        "file_extension" => Format($"L'extension doit être l'une de celles-ci : {error.Expected}."),
         "regex" => "Format non valide.",
         "starts_with" => Format($"Doit commencer par {error.Expected}."),
         "ends_with" => Format($"Doit se terminer par {error.Expected}."),

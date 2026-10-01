@@ -159,6 +159,8 @@ public class LanguageMessagesTests
             ("e164", Theo.String().E164(), "nope"),
             ("iso8601", Theo.String().Iso8601(), "nope"),
             ("iso8601_date", Theo.String().Iso8601Date(), "nope"),
+            ("iso8601_time", Theo.String().Iso8601Time(), "nope"),
+            ("iso8601_duration", Theo.String().Iso8601Duration(), "nope"),
             ("ipv4", Theo.String().Ipv4(), "nope"),
             ("ipv6", Theo.String().Ipv6(), "nope"),
             ("cidr", Theo.String().Cidr(), "nope"),
@@ -181,6 +183,56 @@ public class LanguageMessagesTests
             Assert.False(
                 string.IsNullOrWhiteSpace(message),
                 $"{culture} has no sentence for the {name} format, so it would fall back to English.");
+        }
+    }
+
+    // Reported from another package, so no schema here can produce them: Theon.AspNetCore's file rules
+    // raise these, and this test project does not reference it. Built by hand for that reason -- a
+    // provider missing one of them falls back to English in silence, which is exactly what the
+    // coverage tests exist to stop.
+    [Theory]
+    [MemberData(nameof(Providers))]
+    public void Every_Format_And_Origin_Reported_From_Another_Package_Has_A_Sentence(
+        string culture,
+        SchemaErrorMessageProvider provider)
+    {
+        var cases = new (string What, ValidationErrorInfo Info)[]
+        {
+            ("the content_type format", new ValidationErrorInfo
+            {
+                Code = ValidationErrorCode.InvalidFormat,
+                Format = "content_type",
+                Expected = "image/png",
+            }),
+            ("the file_extension format", new ValidationErrorInfo
+            {
+                Code = ValidationErrorCode.InvalidFormat,
+                Format = "file_extension",
+                Expected = ".png",
+            }),
+            ("a minimum size in bytes", new ValidationErrorInfo
+            {
+                Code = ValidationErrorCode.TooSmall,
+                Origin = ValidationOrigin.Bytes,
+                Minimum = 1L,
+                Inclusive = true,
+            }),
+            ("a maximum size in bytes", new ValidationErrorInfo
+            {
+                Code = ValidationErrorCode.TooBig,
+                Origin = ValidationOrigin.Bytes,
+                Maximum = 5_000_000L,
+                Inclusive = true,
+            }),
+        };
+
+        foreach (var (what, info) in cases)
+        {
+            var message = provider(in info);
+
+            Assert.False(
+                string.IsNullOrWhiteSpace(message),
+                $"{culture} has no sentence for {what}, so it would fall back to English.");
         }
     }
 

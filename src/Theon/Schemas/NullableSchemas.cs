@@ -9,11 +9,12 @@ namespace Theon.Schemas;
 internal sealed class NullableReferenceSchema<T>(Schema<T> inner) : Schema<T?>
     where T : class
 {
-    internal override SchemaDescription Describe(DescriptionContext context)
+    // Null goes in and null comes out, so both sides of the description say so. Unlike Default, which
+    // accepts a null and answers with something else, this one hands the null straight back.
+    /// <inheritdoc />
+    public override SchemaDescription Describe(DescriptionContext context)
     {
-        var described = context.Describe(inner);
-        described.AllowsNull = true;
-        return described;
+        return new SchemaDescription(context.Describe(inner)) { AllowsNull = true };
     }
 
     public override bool TryParse(ref ParseContext context, T? input, out T? output)
@@ -46,11 +47,10 @@ internal sealed class NullableReferenceSchema<T>(Schema<T> inner) : Schema<T?>
 internal sealed class NullableValueSchema<T>(Schema<T> inner) : Schema<T?>
     where T : struct
 {
-    internal override SchemaDescription Describe(DescriptionContext context)
+    /// <inheritdoc />
+    public override SchemaDescription Describe(DescriptionContext context)
     {
-        var described = context.Describe(inner);
-        described.AllowsNull = true;
-        return described;
+        return new SchemaDescription(context.Describe(inner)) { AllowsNull = true };
     }
 
     public override bool TryParse(ref ParseContext context, T? input, out T? output)

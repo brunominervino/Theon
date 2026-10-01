@@ -15,7 +15,8 @@ internal sealed class LazySchema<T>(Func<Schema<T>> factory) : Schema<T>
 {
     // Where a cycle is found, because this is the only schema that can contain itself. The context
     // recognises the repeat and writes a reference rather than descending again.
-    internal override SchemaDescription Describe(DescriptionContext context)
+    /// <inheritdoc />
+    public override SchemaDescription Describe(DescriptionContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
         return context.Describe(_inner.Value);

@@ -7,7 +7,7 @@ internal sealed class RecordCountCheck<TKey, TValue>(int? minimum, int? maximum)
     : Check<IReadOnlyDictionary<TKey, TValue>>
     where TKey : notnull
 {
-    internal override void Describe(SchemaDescription description)
+    internal override void Describe(SchemaDescriptionBuilder description)
     {
         description.MinItems = minimum;
         description.MaxItems = maximum;

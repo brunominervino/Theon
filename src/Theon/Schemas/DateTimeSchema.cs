@@ -98,7 +98,8 @@ public sealed class DateTimeSchema : Schema<DateTime>
     /// <summary>Accepts <see langword="null"/> in addition to everything this schema accepts.</summary>
     public Schema<DateTime?> AllowNull() => new NullableValueSchema<DateTime>(this);
 
-    internal override SchemaDescription Describe(DescriptionContext context) =>
+    /// <inheritdoc />
+    public override SchemaDescription Describe(DescriptionContext context) =>
         CheckDescription.Of(SchemaKind.String, _checks, "date-time");
 
     /// <inheritdoc />

@@ -22,32 +22,22 @@ internal sealed class AnnotatedSchema<TInput, TOutput>(
         AsyncParseContext context,
         TInput input) => inner.TryParseAsync(context, input);
 
-    internal override SchemaDescription Describe(DescriptionContext context)
+    /// <inheritdoc />
+    public override SchemaDescription Describe(DescriptionContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
 
         var described = context.Describe(inner);
 
-        // Written over whatever the inner schema said, because this is the outer and later statement
-        // and the caller who wrote it meant it to win. The node is freshly made on every describe,
-        // including when the inner schema was promoted to a definition, so nothing shared is touched.
-        if (title is not null)
+        // Each of these wins over whatever the inner schema said, because this is the outer and later
+        // statement and the caller who wrote it meant it to win. Deprecation only accumulates:
+        // annotating something as not deprecated is not a thing anyone does.
+        return new SchemaDescription(described)
         {
-            described.Title = title;
-        }
-
-        if (description is not null)
-        {
-            described.Description = description;
-        }
-
-        if (example is not null)
-        {
-            described.Example = example;
-        }
-
-        described.IsDeprecated |= deprecated;
-
-        return described;
+            Title = title ?? described.Title,
+            Description = description ?? described.Description,
+            Example = example ?? described.Example,
+            IsDeprecated = described.IsDeprecated || deprecated,
+        };
     }
 }

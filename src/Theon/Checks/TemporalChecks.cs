@@ -15,7 +15,7 @@ internal sealed class NotBeforeCheck<T>(
     // Recorded even though the dialect has no keyword for a date range, because the description is
     // the library's own model and a later consumer may have somewhere to put it. The writer decides
     // what survives into a document.
-    internal override void Describe(SchemaDescription description)
+    internal override void Describe(SchemaDescriptionBuilder description)
     {
         description.Minimum = bound;
         description.ExclusiveMinimum = !inclusive;
@@ -47,7 +47,7 @@ internal sealed class NotAfterCheck<T>(
     ValidationOrigin origin = ValidationOrigin.DateTime) : Check<T>
     where T : IComparable<T>
 {
-    internal override void Describe(SchemaDescription description)
+    internal override void Describe(SchemaDescriptionBuilder description)
     {
         description.Maximum = bound;
         description.ExclusiveMaximum = !inclusive;

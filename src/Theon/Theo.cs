@@ -62,6 +62,76 @@ public static class Theo
     /// <summary>Starts a schema for a <see cref="System.Guid"/>.</summary>
     public static GuidSchema Guid() => new();
 
+    /// <summary>
+    /// Builds a schema from a JSON Schema document, for validating JSON somebody else described.
+    /// </summary>
+    /// <param name="document">The document, in the 2020-12 dialect.</param>
+    /// <returns>A schema over an already-parsed JSON value.</returns>
+    /// <remarks>
+    /// <para>
+    /// The reverse of <c>ToJsonSchema</c>, and for a different job. This is for checking a payload
+    /// against a schema somebody else published — a third party's OpenAPI description, a contract test,
+    /// a configuration file whose shape is declared elsewhere. It is not a replacement for
+    /// <see cref="Object{T}"/>: it produces a <see cref="System.Text.Json.Nodes.JsonNode"/> and not a
+    /// typed object, because turning a document into a type would mean matching property names by
+    /// reflection, which this library does not do.
+    /// </para>
+    /// <para>
+    /// The input is a <see cref="System.Text.Json.Nodes.JsonNode"/> rather than text, so
+    /// <c>System.Text.Json</c> still does the parsing and this still validates a materialized value —
+    /// which is what every other schema here does.
+    /// </para>
+    /// <para>
+    /// Supported: <c>$ref</c> and <c>$defs</c> (including a schema that refers to itself),
+    /// <c>type</c>, <c>enum</c>, <c>const</c>, <c>minimum</c>, <c>maximum</c>,
+    /// <c>exclusiveMinimum</c>, <c>exclusiveMaximum</c>, <c>multipleOf</c>, <c>minLength</c>,
+    /// <c>maxLength</c>, <c>pattern</c>, <c>format</c>, <c>items</c>, <c>minItems</c>,
+    /// <c>maxItems</c>, <c>uniqueItems</c>, <c>properties</c>, <c>required</c>,
+    /// <c>additionalProperties</c>, <c>minProperties</c>, <c>maxProperties</c>, <c>anyOf</c> and
+    /// <c>allOf</c>.
+    /// </para>
+    /// <para>
+    /// A keyword that asserts something this cannot check — <c>oneOf</c>, <c>not</c>, <c>if</c>,
+    /// <c>patternProperties</c> and the rest — throws here, when the schema is built, rather than being
+    /// left out. Leaving an assertion out would make the schema accept values the document rejects,
+    /// which is the direction that lets a bad value through while the caller believes it was checked.
+    /// A keyword that asserts nothing — a title, a description, an unknown extension — is ignored, as
+    /// the dialect requires.
+    /// </para>
+    /// </remarks>
+    /// <example>
+    /// <code>
+    /// var published = JsonNode.Parse(await client.GetStringAsync(schemaUrl));
+    /// var schema = Theo.JsonSchema(published!);
+    ///
+    /// var result = schema.SafeParse(JsonNode.Parse(payload));
+    /// </code>
+    /// </example>
+    /// <exception cref="System.ArgumentNullException"><paramref name="document"/> was null.</exception>
+    /// <exception cref="System.NotSupportedException">
+    /// The document uses a keyword this cannot honour, refers outside itself, or carries a pattern that
+    /// cannot be matched in linear time.
+    /// </exception>
+    public static Schema<System.Text.Json.Nodes.JsonNode?> JsonSchema(
+        System.Text.Json.Nodes.JsonNode document)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+
+        var read = Json.JsonSchemaReader.Read(document);
+
+        // Each definition becomes a schema of its own, sharing one map. A reference resolves through
+        // the map at parse time, which is what lets a schema contain itself without this method
+        // recursing while it builds one.
+        var referenced = new Dictionary<string, Schemas.JsonDocumentSchema>(StringComparer.Ordinal);
+
+        foreach (var (pointer, description) in read.Definitions)
+        {
+            referenced[pointer] = new Schemas.JsonDocumentSchema(description, referenced);
+        }
+
+        return new Schemas.JsonDocumentSchema(read.Root, referenced);
+    }
+
     /// <summary>Starts a schema for an object of type <typeparamref name="T"/>.</summary>
     /// <typeparam name="T">The object type to validate: a class, record, struct or record struct.</typeparam>
     public static ObjectSchema<T> Object<T>()

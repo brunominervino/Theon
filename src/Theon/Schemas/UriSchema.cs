@@ -92,7 +92,8 @@ public sealed class UriSchema : Schema<Uri>
     /// <summary>Accepts <see langword="null"/> in addition to everything this schema accepts.</summary>
     public Schema<Uri?> AllowNull() => new NullableReferenceSchema<Uri>(this);
 
-    internal override SchemaDescription Describe(DescriptionContext context) =>
+    /// <inheritdoc />
+    public override SchemaDescription Describe(DescriptionContext context) =>
         CheckDescription.Of(SchemaKind.String, _checks, "uri-reference");
 
     /// <inheritdoc />

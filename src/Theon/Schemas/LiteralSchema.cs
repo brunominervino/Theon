@@ -36,7 +36,8 @@ internal sealed class LiteralSchema<T> : Schema<T>
             : value?.ToString() ?? string.Empty;
     }
 
-    internal override SchemaDescription Describe(DescriptionContext context) => new()
+    /// <inheritdoc />
+    public override SchemaDescription Describe(DescriptionContext context) => new()
     {
         Kind = SchemaKinds.For(typeof(T)),
         ConstantValue = _value,

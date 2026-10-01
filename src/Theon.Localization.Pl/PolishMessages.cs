@@ -73,6 +73,11 @@ public static class PolishMessages
         ValidationOrigin.DateTime => error.Inclusive
             ? Format($"Data musi być równa lub późniejsza niż {error.Minimum}.")
             : Format($"Data musi być późniejsza niż {error.Minimum}."),
+        ValidationOrigin.Bytes => Plural(
+            error.Minimum,
+            "Musi mieć co najmniej 1 bajt.",
+            $"Musi mieć co najmniej {error.Minimum} bajty.",
+            $"Musi mieć co najmniej {error.Minimum} bajtów."),
         _ => error.Inclusive
             ? Format($"Wartość musi być większa lub równa {error.Minimum}.")
             : Format($"Wartość musi być większa niż {error.Minimum}."),
@@ -93,6 +98,11 @@ public static class PolishMessages
         ValidationOrigin.DateTime => error.Inclusive
             ? Format($"Data musi być równa lub wcześniejsza niż {error.Maximum}.")
             : Format($"Data musi być wcześniejsza niż {error.Maximum}."),
+        ValidationOrigin.Bytes => Plural(
+            error.Maximum,
+            "Może mieć najwyżej 1 bajt.",
+            $"Może mieć najwyżej {error.Maximum} bajty.",
+            $"Może mieć najwyżej {error.Maximum} bajtów."),
         _ => error.Inclusive
             ? Format($"Wartość musi być mniejsza lub równa {error.Maximum}.")
             : Format($"Wartość musi być mniejsza niż {error.Maximum}."),
@@ -118,6 +128,10 @@ public static class PolishMessages
         "jwt" => "Nieprawidłowy token.",
         "credit_card" => "Nieprawidłowy numer karty.",
         "iban" => "Nieprawidłowy IBAN.",
+        "iso8601_time" => "Nieprawidłowa godzina.",
+        "iso8601_duration" => "Nieprawidłowy czas trwania.",
+        "content_type" => Format($"Typ musi być jednym z: {error.Expected}."),
+        "file_extension" => Format($"Rozszerzenie pliku musi być jednym z: {error.Expected}."),
         "regex" => "Nieprawidłowy format.",
         "starts_with" => Format($"Musi zaczynać się od {error.Expected}."),
         "ends_with" => Format($"Musi kończyć się na {error.Expected}."),

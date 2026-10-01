@@ -82,17 +82,18 @@ public sealed class RecordSchema<TKey, TValue> : Schema<IReadOnlyDictionary<TKey
         return With(new RefineCheck<IReadOnlyDictionary<TKey, TValue>>(predicate, message));
     }
 
-    internal override SchemaDescription Describe(DescriptionContext context)
+    /// <inheritdoc />
+    public override SchemaDescription Describe(DescriptionContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        var description = CheckDescription.Of(SchemaKind.Map, _checks);
+        var description = CheckDescription.Build(SchemaKind.Map, _checks);
 
         // The value schema becomes additionalProperties, which is how a document says "any key, this
         // kind of value". What the key schema requires has nowhere to go: propertyNames exists in the
         // dialect but takes a schema over the text of a key, and ours is a schema over its type.
         description.AdditionalProperties = context.Describe(_value);
-        return description;
+        return description.ToDescription();
     }
 
     /// <inheritdoc />

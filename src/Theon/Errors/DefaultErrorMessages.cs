@@ -51,6 +51,9 @@ public static class DefaultErrorMessages
         ValidationOrigin.Collection => string.Create(
             CultureInfo.InvariantCulture,
             $"Must contain at least {error.Minimum} item(s)."),
+        ValidationOrigin.Bytes => string.Create(
+            CultureInfo.InvariantCulture,
+            $"Must be at least {error.Minimum} byte(s)."),
         _ => error.Inclusive
             ? string.Create(CultureInfo.InvariantCulture, $"Must be greater than or equal to {error.Minimum}.")
             : string.Create(CultureInfo.InvariantCulture, $"Must be greater than {error.Minimum}."),
@@ -64,6 +67,9 @@ public static class DefaultErrorMessages
         ValidationOrigin.Collection => string.Create(
             CultureInfo.InvariantCulture,
             $"Must contain at most {error.Maximum} item(s)."),
+        ValidationOrigin.Bytes => string.Create(
+            CultureInfo.InvariantCulture,
+            $"Must be at most {error.Maximum} byte(s)."),
         _ => error.Inclusive
             ? string.Create(CultureInfo.InvariantCulture, $"Must be less than or equal to {error.Maximum}.")
             : string.Create(CultureInfo.InvariantCulture, $"Must be less than {error.Maximum}."),
@@ -93,6 +99,14 @@ public static class DefaultErrorMessages
         "jwt" => "Invalid token.",
         "credit_card" => "Invalid card number.",
         "iban" => "Invalid IBAN.",
+        "iso8601_time" => "Invalid time.",
+        "iso8601_duration" => "Invalid duration.",
+        "content_type" => string.Create(
+            CultureInfo.InvariantCulture,
+            $"Must be one of these types: {error.Expected}."),
+        "file_extension" => string.Create(
+            CultureInfo.InvariantCulture,
+            $"Must be one of these file types: {error.Expected}."),
         "regex" => "Invalid format.",
         "starts_with" => string.Create(CultureInfo.InvariantCulture, $"Must start with {error.Expected}."),
         "ends_with" => string.Create(CultureInfo.InvariantCulture, $"Must end with {error.Expected}."),

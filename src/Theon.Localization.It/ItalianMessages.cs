@@ -60,6 +60,9 @@ public static class ItalianMessages
         ValidationOrigin.DateTime => error.Inclusive
             ? Format($"Deve essere uguale o successivo a {error.Minimum}.")
             : Format($"Deve essere successivo a {error.Minimum}."),
+        // No plural branch, and not an oversight: "byte" is invariable in Italian, so a Plural
+        // call here would pick between two identical strings.
+        ValidationOrigin.Bytes => Format($"Deve occupare almeno {error.Minimum} byte."),
         _ => error.Inclusive
             ? Format($"Deve essere maggiore o uguale a {error.Minimum}.")
             : Format($"Deve essere maggiore di {error.Minimum}."),
@@ -78,6 +81,7 @@ public static class ItalianMessages
         ValidationOrigin.DateTime => error.Inclusive
             ? Format($"Deve essere uguale o precedente a {error.Maximum}.")
             : Format($"Deve essere precedente a {error.Maximum}."),
+        ValidationOrigin.Bytes => Format($"Deve occupare al massimo {error.Maximum} byte."),
         _ => error.Inclusive
             ? Format($"Deve essere minore o uguale a {error.Maximum}.")
             : Format($"Deve essere minore di {error.Maximum}."),
@@ -103,6 +107,10 @@ public static class ItalianMessages
         "jwt" => "Token non valido.",
         "credit_card" => "Numero di carta non valido.",
         "iban" => "IBAN non valido.",
+        "iso8601_time" => "Ora non valida.",
+        "iso8601_duration" => "Durata non valida.",
+        "content_type" => Format($"Il tipo deve essere uno di questi: {error.Expected}."),
+        "file_extension" => Format($"L'estensione deve essere una di queste: {error.Expected}."),
         "regex" => "Formato non valido.",
         "starts_with" => Format($"Deve iniziare con {error.Expected}."),
         "ends_with" => Format($"Deve terminare con {error.Expected}."),

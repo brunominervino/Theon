@@ -24,4 +24,12 @@ public enum ValidationOrigin
 
     /// <summary>The bound was measured against a date or time value.</summary>
     DateTime,
+
+    /// <summary>The bound was measured against a size in bytes.</summary>
+    /// <remarks>
+    /// A quantity like any other, and it needs its own sentence for the same reason text and
+    /// collections do: "must be at most 5000000" says nothing about what is being counted. Used by the
+    /// file rules in <c>Theon.AspNetCore</c>, and by anything else measuring bytes.
+    /// </remarks>
+    Bytes,
 }

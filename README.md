@@ -199,8 +199,9 @@ Both see the same value and both report, so a caller sees every reason at once. 
 intersection; feeding one schema's result into the next is `Transform`, which says so in its type.
 
 **Formats for the things people actually type.** `Email()`, `Url()`, `Uuid()`, `Base64()`,
-`Base64Url()`, `Hex()`, `E164()`, `Iso8601()`, `Iso8601Date()`, `Ipv4()`, `Ipv6()`, `Cidr()`,
-`Hostname()`, `Jwt()`, `CreditCard()` and `Iban()`. Every pattern is a `[GeneratedRegex]` declared
+`Base64Url()`, `Hex()`, `E164()`, `Iso8601()`, `Iso8601Date()`, `Iso8601Time()`,
+`Iso8601Duration()`, `Ipv4()`, `Ipv6()`, `Cidr()`, `Hostname()`, `Jwt()`, `CreditCard()` and
+`Iban()`. Every pattern is a `[GeneratedRegex]` declared
 `NonBacktracking`, so matching is linear in the length of the input by construction and a hostile
 string cannot be made to cost anything — there is a test that tries.
 
@@ -218,7 +219,9 @@ that accepts the first is a vulnerability and the other two are mistakes. `Match
 pattern is the documented escape hatch.
 
 `Iso8601Date()` is not a pattern at all. A pattern can describe the shape of a date and cannot tell
-February from the number 31, so this one parses: `2026-02-31` fails.
+February from the number 31, so this one parses: `2026-02-31` fails. `Iso8601Duration()` is not one
+either, because the ordering is the rule — `P1M2Y` and `PT1D` are both wrong, and the same letter means
+months before the `T` and minutes after it.
 
 **Text can become a value, and the value can have rules.** The most ordinary pipeline there is:
 
@@ -291,6 +294,85 @@ schema.ToJsonSchema(new JsonSchemaOptions { OnUnrepresentable = UnrepresentableP
 // CheckIn: a minimum bound, which has no keyword for a string
 ```
 
+And where the rule is one only you can state, you can state it. An amendment receives every node of
+the document once it is written, with the path it is at and the list of what it could not say:
+
+```csharp
+schema.ToJsonSchema(new JsonSchemaOptions
+{
+    OnUnrepresentable = UnrepresentablePolicy.Throw,
+    Amend = node =>
+    {
+        if (node.Path == "ZipCode")
+        {
+            node.Json["pattern"] = @"\A\d{5}-\d{3}\z";
+            node.Expressed = true;   // and the policy stops reporting this node
+        }
+    },
+});
+```
+
+`Expressed` is a declaration, and leaving it alone still reports however much you changed: nothing
+here can tell a `pattern` that expresses a refinement from one that does not, and a document believed
+to be complete that quietly is not is the whole thing that policy exists to prevent. The schema
+instance is deliberately not handed over — it would arrive as an `object` to pattern-match, which is
+the branching on schema identity this library refuses in its own code.
+
+**And the model underneath is yours.** A schema describes itself by overriding `Describe`, which is
+how a schema you wrote gets documented as well as the built-in ones:
+
+```csharp
+public sealed class UlidSchema : Schema<string>
+{
+    public override bool TryParse(ref ParseContext context, string input, out string output) { ... }
+
+    public override SchemaDescription Describe(DescriptionContext context) => new()
+    {
+        Kind = SchemaKind.String,
+        Format = "ulid",
+        MinLength = 26,
+        MaxLength = 26,
+    };
+}
+```
+
+And the same model is what you read to write a generator this library does not ship — for protobuf,
+for Avro, for rendering a form. `ToJsonSchema` is one such generator and has no more access to a
+schema than this gives you:
+
+```csharp
+var described = schema.Describe();
+
+Write(described.Root);                                  // kinds, bounds, formats, children
+foreach (var (name, definition) in described.Definitions)   // whatever repeated, named once
+{
+    WriteNamed(name, definition);
+}
+```
+
+**A document has a side.** A schema that transforms accepts one shape and produces another, and a
+request body and a response body are the two different documents that come out of it:
+
+```csharp
+var schema = Theo.String().Trim()
+    .TryTransform<int>(int.TryParse, "Must be a whole number.", Theo.Int().Min(1).Max(100));
+
+schema.ToJsonSchema();                                 // { "type": "string" }
+schema.ToJsonSchema(new JsonSchemaOptions { Direction = DescriptionDirection.Output });
+                                                       // { "type": "integer", "minimum": 1, ... }
+```
+
+`Input` is the default, because that is what a request body needs and what every document generated
+before this option existed said. The output side is where the follow-on schema earns its keep: with
+one, the converted value describes itself completely and nothing is left out; without one there is a
+type and no schema, so the document says `integer` and admits that is all it knows.
+
+Six wrappers differ between the two sides, and two that look as though they should do not.
+`Required()` is declared `Schema<T?>` and never produces a null, because the only null that leaves it
+belongs to a parse that failed. `Catch()` is the one case where the output side is the *more* precise
+of the two: `Theo.String().Email().Catch("none")` really does produce `"none"`, so the response side
+says `anyOf: [an e-mail address, const: "none"]` rather than claiming an address it may not deliver.
+
 For an OpenAPI description, `ToJsonSchemaDocument` hands the shared schemas back rather than inlining
 them, so they can go in `components/schemas` where every operation can reach them. In ASP.NET Core,
 `.Validate(schema)` leaves the schema on the endpoint as metadata, so whatever produces the
@@ -298,6 +380,31 @@ description can ask each endpoint what it actually requires instead of inferring
 handler signature. There is deliberately no document transformer in the box: the built-in OpenAPI
 pipeline arrived in .NET 9, this package also targets net8.0, and metadata serves every generator
 without committing to one.
+
+**And a document somebody else wrote becomes a schema.** The other direction, for checking a payload
+against a description this program did not author — a third party's OpenAPI description, a contract
+test, a configuration file whose shape is declared elsewhere:
+
+```csharp
+var published = JsonNode.Parse(await client.GetStringAsync(schemaUrl))!;
+var schema = Theo.JsonSchema(published);
+
+var result = schema.SafeParse(JsonNode.Parse(payload));
+// Errors arrive with paths, codes and messages like any other parse.
+```
+
+It hands back a `Schema<JsonNode?>` and never a typed object: a document describes JSON, and turning
+that into a type would mean matching property names by reflection. Where you have a type, keep using
+`Theo.Object<T>()` — this is for where you do not.
+
+A keyword it cannot honour — `oneOf`, `not`, `if`, `patternProperties` — throws when the schema is
+built, rather than being dropped. Dropping an assertion would make the schema accept values the
+document rejects, which is the direction that lets a bad value through while you believe it was
+checked. A keyword that asserts nothing is ignored, as the dialect requires.
+
+The two directions are checked against each other rather than asserted: a document generated from a
+schema, read back, and generated again has to be the same document, for every shape this library
+writes.
 
 **Errors arrive in the shape you render.** Grouping a flat list by field is a loop every caller
 would otherwise write, and get subtly wrong at the root level:
@@ -440,6 +547,34 @@ in the same three lines — and the compiler checks the schema matches the type 
 
 Validation runs asynchronously, so a schema with a `RefineAsync` rule works here with no extra
 ceremony, and the request's cancellation token reaches it.
+
+**Uploaded files have a factory of their own.** `IFormFile` is an ASP.NET Core type, so a schema for
+one cannot be built from `Theo`, which lives in a package with no dependencies and is keeping it:
+
+```csharp
+app.MapPost("/avatar", (IFormFile file) => Results.Ok())
+   .Validate(Upload.File()
+       .MaxSize(5 * 1024 * 1024, "Pick an image no larger than 5 MB.")
+       .ContentType("image/png", "image/jpeg")
+       .Extension(".png", ".jpg", ".jpeg"));
+
+Upload.Files()
+    .MinCount(1)
+    .MaxCount(10)
+    .MaxTotalSize(20 * 1024 * 1024)      // the one rule no per-file limit can express
+    .Each(Upload.File().ContentType("application/pdf"));
+```
+
+**The size is the only fact among these.** `ContentType` and `FileName` come from the headers of the
+multipart section, written by whoever sent the request and forged in a line. These rules catch
+somebody picking the wrong file, which is the common failure, and they are not a security control —
+a check a reader believes in and which is not true is worse than no check. Proving what a file is
+means reading its opening bytes, which is deliberately out of scope and is what `RefineAsync` is for.
+
+A document writes a file as `{"type": "string", "contentMediaType": "image/png"}`, which is what
+OpenAPI 3.1 took for a binary part. The size bound has no keyword at all — `maxLength` counts
+characters and a binary section has none — so it is reported as something the document cannot say
+rather than spelled with a keyword that means something else.
 
 ## Messages in another language
 

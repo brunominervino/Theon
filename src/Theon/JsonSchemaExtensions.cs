@@ -62,6 +62,52 @@ public sealed class JsonSchemaOptions
 
     /// <summary>Gets what to do about a rule the document cannot express.</summary>
     public UnrepresentablePolicy OnUnrepresentable { get; init; }
+
+    /// <summary>Gets a function that may change every node of the document after it is written.</summary>
+    /// <remarks>
+    /// <para>
+    /// The way to put back something this library would not invent. A <c>Refine</c> that checks a
+    /// postcode against a national format has a <c>pattern</c> that expresses it, and nothing here can
+    /// discover what that pattern is; an amendment can write it, and say so with
+    /// <see cref="JsonSchemaNode.Expressed"/> so that <see cref="OnUnrepresentable"/> stops reporting
+    /// the node.
+    /// </para>
+    /// <para>
+    /// Also the place for anything the surrounding document needs that the dialect has no word for — a
+    /// vendor extension, a hint for whatever renders the form.
+    /// </para>
+    /// </remarks>
+    /// <example>
+    /// <code>
+    /// new JsonSchemaOptions
+    /// {
+    ///     OnUnrepresentable = UnrepresentablePolicy.Throw,
+    ///     Amend = node =&gt;
+    ///     {
+    ///         if (node.Path == "ZipCode")
+    ///         {
+    ///             node.Json["pattern"] = @"\A\d{5}-\d{3}\z";
+    ///             node.Expressed = true;
+    ///         }
+    ///     },
+    /// };
+    /// </code>
+    /// </example>
+    public JsonSchemaAmendment? Amend { get; init; }
+
+    /// <summary>Gets which side of the schema the document describes.</summary>
+    /// <remarks>
+    /// <para>
+    /// <see cref="DescriptionDirection.Input"/> by default, which is what a request body needs: the
+    /// document tells a caller what to send. Set it to <see cref="DescriptionDirection.Output"/> for a
+    /// response body, where the document tells a reader what they will receive.
+    /// </para>
+    /// <para>
+    /// This only matters for a schema that transforms. Every other schema produces what it accepts, so
+    /// the two sides are the same description and the option changes nothing.
+    /// </para>
+    /// </remarks>
+    public DescriptionDirection Direction { get; init; }
 }
 
 /// <summary>
@@ -152,15 +198,7 @@ public static class JsonSchemaExtensions
 
         options ??= JsonSchemaOptions.Default;
 
-        var described = Describe(schema, options);
-
-        return JsonSchemaWriter.WriteDocument(
-            described.Root,
-            described.Definitions,
-            options.IncludeDialect,
-            options.Title,
-            options.Id,
-            inlineDefinitions: true);
+        return Build(schema, options, inlineDefinitions: true).Root;
     }
 
     /// <summary>
@@ -199,51 +237,47 @@ public static class JsonSchemaExtensions
 
         options ??= JsonSchemaOptions.Default;
 
-        var described = Describe(schema, options);
+        var built = Build(schema, options, inlineDefinitions: false);
 
-        var root = JsonSchemaWriter.WriteDocument(
-            described.Root,
-            described.Definitions,
-            options.IncludeDialect,
-            options.Title,
-            options.Id,
-            inlineDefinitions: false);
-
-        var separate = new Dictionary<string, JsonObject>(
-            described.Definitions.Count,
-            StringComparer.Ordinal);
-
-        foreach (var (name, description) in described.Definitions)
-        {
-            separate[name] = JsonSchemaWriter.Write(description);
-        }
-
-        return new JsonSchemaDocument(root, separate);
+        return new JsonSchemaDocument(built.Root, built.Definitions);
     }
 
-    private static (SchemaDescription Root, IReadOnlyDictionary<string, SchemaDescription> Definitions)
-        Describe<TInput, TOutput>(Schema<TInput, TOutput> schema, JsonSchemaOptions options)
+    // Describes, writes, and only then reports what was missing.
+    //
+    // That order is the whole reason an amendment can fix anything. The policy used to be checked on
+    // the description, before a single node existed, so a caller who patched a node to express a rule
+    // still took the exception for not having expressed it. Writing first lets the amendment run, and
+    // the amendment says for itself which nodes it dealt with. Nothing is handed back before the
+    // report, so a document that fails the policy is still never returned.
+    private static (JsonObject Root, Dictionary<string, JsonObject> Definitions)
+        Build<TInput, TOutput>(
+            Schema<TInput, TOutput> schema,
+            JsonSchemaOptions options,
+            bool inlineDefinitions)
     {
-        var context = new DescriptionContext(options.ReferencePrefix);
-        var root = context.Describe(schema);
+        var context = new DescriptionContext(options.ReferencePrefix, options.Direction);
+        var described = context.Describe(schema);
 
-        if (options.OnUnrepresentable == UnrepresentablePolicy.Throw)
+        var writer = new JsonSchemaWriter(options.Amend);
+        var root = writer.WriteDocument(
+            described,
+            context.Definitions,
+            options,
+            inlineDefinitions,
+            out var definitions);
+
+        if (options.OnUnrepresentable == UnrepresentablePolicy.Throw && writer.Lost.Count > 0)
         {
-            var missing = UnrepresentableWalk.Collect(root, context.Definitions);
-
-            if (missing.Count > 0)
-            {
-                throw new InvalidOperationException(
-                    "These rules have no keyword in JSON Schema 2020-12 and were left out of the " +
-                    "document, so nothing reading it will enforce them:" +
-                    Environment.NewLine +
-                    string.Join(Environment.NewLine, missing.Select(static rule => "  " + rule)) +
-                    Environment.NewLine +
-                    "Describe them with Annotate, or leave OnUnrepresentable at Omit to accept an " +
-                    "incomplete document.");
-            }
+            throw new InvalidOperationException(
+                "These rules have no keyword in JSON Schema 2020-12 and were left out of the " +
+                "document, so nothing reading it will enforce them:" +
+                Environment.NewLine +
+                string.Join(Environment.NewLine, writer.Lost.Select(static rule => "  " + rule)) +
+                Environment.NewLine +
+                "Describe them with Annotate, express them yourself with Amend, or leave " +
+                "OnUnrepresentable at Omit to accept an incomplete document.");
         }
 
-        return (root, context.Definitions);
+        return (root, definitions);
     }
 }

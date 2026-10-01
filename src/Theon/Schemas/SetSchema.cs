@@ -112,17 +112,18 @@ public sealed class SetSchema<TElement> : Schema<IReadOnlyCollection<TElement>>
     public Schema<IReadOnlyCollection<TElement>?> AllowNull() =>
         new NullableReferenceSchema<IReadOnlyCollection<TElement>>(this);
 
-    internal override SchemaDescription Describe(DescriptionContext context)
+    /// <inheritdoc />
+    public override SchemaDescription Describe(DescriptionContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        var description = CheckDescription.Of(SchemaKind.Array, _checks);
+        var description = CheckDescription.Build(SchemaKind.Array, _checks);
 
         // Distinctness is stated when the set is described rather than contributed by a rule, because
         // a set is distinct by construction and has no such rule to contribute it.
         description.UniqueItems = true;
         description.Items = context.Describe(_element);
-        return description;
+        return description.ToDescription();
     }
 
     /// <inheritdoc />

@@ -7,7 +7,7 @@ namespace Theon.Checks;
 internal sealed class GreaterThanCheck<T>(T bound, bool inclusive) : Check<T>
     where T : INumber<T>
 {
-    internal override void Describe(SchemaDescription description)
+    internal override void Describe(SchemaDescriptionBuilder description)
     {
         description.Minimum = bound;
         description.ExclusiveMinimum = !inclusive;
@@ -35,7 +35,7 @@ internal sealed class GreaterThanCheck<T>(T bound, bool inclusive) : Check<T>
 internal sealed class LessThanCheck<T>(T bound, bool inclusive) : Check<T>
     where T : INumber<T>
 {
-    internal override void Describe(SchemaDescription description)
+    internal override void Describe(SchemaDescriptionBuilder description)
     {
         description.Maximum = bound;
         description.ExclusiveMaximum = !inclusive;
@@ -63,7 +63,7 @@ internal sealed class LessThanCheck<T>(T bound, bool inclusive) : Check<T>
 internal sealed class MultipleOfCheck<T>(T divisor) : Check<T>
     where T : INumber<T>
 {
-    internal override void Describe(SchemaDescription description) =>
+    internal override void Describe(SchemaDescriptionBuilder description) =>
         description.MultipleOf = divisor;
 
     internal override void Run(ref ParseContext context, ref T value)

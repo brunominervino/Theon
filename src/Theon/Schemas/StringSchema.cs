@@ -284,6 +284,47 @@ public sealed class StringSchema : Schema<string>
     public StringSchema Iso8601Date(string? message = null) =>
         With(new Iso8601Check(Iso8601Check.Kind.Date) { Message = message });
 
+    /// <summary>Requires a time of day written the way ISO 8601 writes one.</summary>
+    /// <param name="message">A message that replaces the default for this rule.</param>
+    /// <remarks>
+    /// <para>
+    /// <c>14:30:00</c>, and also with fractional seconds or with the seconds left off. The clock is
+    /// checked, not just the shape, so <c>24:00:00</c> and <c>14:60:00</c> both fail.
+    /// </para>
+    /// <para>
+    /// No offset. A time of day with one is a different idea, and the value that carries it is a
+    /// <see cref="System.DateTimeOffset"/>; a <see cref="System.TimeOnly"/> has nowhere to put it. That
+    /// is also why a generated document says nothing about this rule: the dialect's <c>time</c> format
+    /// is RFC 3339, which requires the offset, and claiming it would make the document stricter than
+    /// the schema.
+    /// </para>
+    /// </remarks>
+    public StringSchema Iso8601Time(string? message = null) =>
+        With(new Iso8601Check(Iso8601Check.Kind.Time) { Message = message });
+
+    /// <summary>Requires a duration written the way ISO 8601 writes one.</summary>
+    /// <param name="message">A message that replaces the default for this rule.</param>
+    /// <remarks>
+    /// <para>
+    /// <c>P1Y2M3DT4H5M6S</c>, <c>PT5S</c>, <c>P3W</c>, and the forms in between. The order is enforced
+    /// and a repeated component is refused, so <c>PT1D</c> and <c>P1M2Y</c> both fail where a looser
+    /// rule would let them through.
+    /// </para>
+    /// <para>
+    /// This is not the form .NET writes for a <see cref="System.TimeSpan"/>, which is
+    /// <c>00:00:05</c> — use <see cref="Theo.TimeSpan"/> for that. This is for the duration a JSON
+    /// document or an XML payload carries, and the months and years it can express have no
+    /// <see cref="System.TimeSpan"/> to hold them.
+    /// </para>
+    /// <para>
+    /// Two deliberate departures. A leading minus is refused, because a negative duration in a
+    /// configuration value is a mistake rather than an intention. A fraction is allowed on any
+    /// component rather than only the last, because producers vary and <c>PT0.5H</c> is not a typo.
+    /// </para>
+    /// </remarks>
+    public StringSchema Iso8601Duration(string? message = null) =>
+        With(new Iso8601Check(Iso8601Check.Kind.Duration) { Message = message });
+
     /// <summary>Requires the value to match <paramref name="pattern"/>.</summary>
     /// <param name="pattern">The pattern to match.</param>
     /// <param name="format">A short name for this format, used by message providers.</param>
@@ -362,7 +403,8 @@ public sealed class StringSchema : Schema<string>
     /// <summary>Accepts <see langword="null"/> in addition to everything this schema accepts.</summary>
     public Schema<string?> AllowNull() => new NullableReferenceSchema<string>(this);
 
-    internal override SchemaDescription Describe(DescriptionContext context) =>
+    /// <inheritdoc />
+    public override SchemaDescription Describe(DescriptionContext context) =>
         CheckDescription.Of(SchemaKind.String, _checks);
 
     /// <inheritdoc />

@@ -13,16 +13,31 @@ namespace Theon.Schemas;
 internal sealed class DefaultValueSchema<T>(Schema<T> inner, T fallback) : Schema<T?, T>
     where T : struct
 {
-    // Null is accepted and answered, so the document says the value may be null and names what it
-    // becomes. "default" is an annotation in this dialect, not an assertion, which is exactly right:
-    // it tells a reader what happens without claiming a validator will do it.
-    internal override SchemaDescription Describe(DescriptionContext context)
+    // On the input side null is accepted, so the document says the value may be null and names what
+    // it becomes. "default" is an annotation in this dialect, not an assertion, which is exactly
+    // right: it tells a reader what happens without claiming a validator will do it.
+    //
+    // On the output side neither of those is true. A value always comes out, so null is not among the
+    // things it can be, and "default" describes what happens to an absent input -- of which there is
+    // no such thing on the way out. What is left is exactly what the inner schema produces.
+    /// <inheritdoc />
+    public override SchemaDescription Describe(DescriptionContext context)
     {
+        ArgumentNullException.ThrowIfNull(context);
+
         var described = context.Describe(inner);
-        described.AllowsNull = true;
-        described.DefaultValue = fallback;
-        described.HasDefaultValue = true;
-        return described;
+
+        if (context.Direction == DescriptionDirection.Output)
+        {
+            return described;
+        }
+
+        return new SchemaDescription(described)
+        {
+            AllowsNull = true,
+            DefaultValue = fallback,
+            HasDefaultValue = true,
+        };
     }
 
     public override bool TryParse(ref ParseContext context, T? input, out T output)
@@ -51,13 +66,25 @@ internal sealed class DefaultValueSchema<T>(Schema<T> inner, T fallback) : Schem
 internal sealed class DefaultReferenceSchema<T>(Schema<T> inner, T fallback) : Schema<T?, T>
     where T : class
 {
-    internal override SchemaDescription Describe(DescriptionContext context)
+    // The same two sides as DefaultValueSchema, for the same reasons.
+    /// <inheritdoc />
+    public override SchemaDescription Describe(DescriptionContext context)
     {
+        ArgumentNullException.ThrowIfNull(context);
+
         var described = context.Describe(inner);
-        described.AllowsNull = true;
-        described.DefaultValue = fallback;
-        described.HasDefaultValue = true;
-        return described;
+
+        if (context.Direction == DescriptionDirection.Output)
+        {
+            return described;
+        }
+
+        return new SchemaDescription(described)
+        {
+            AllowsNull = true,
+            DefaultValue = fallback,
+            HasDefaultValue = true,
+        };
     }
 
     public override bool TryParse(ref ParseContext context, T? input, out T output)

@@ -82,6 +82,22 @@ public class JsonSchemaTests
     }
 
     [Fact]
+    public void A_Duration_Is_A_Format_The_Dialect_Knows() =>
+        Assert.Equal("duration", Schema(Theo.String().Iso8601Duration())["format"]!.GetValue<string>());
+
+    // The dialect's "time" is RFC 3339 full-time, which requires an offset, and this rule accepts a
+    // time of day without one. Claiming the format would make the document stricter than the schema,
+    // so a client generated from it would refuse a value the server takes.
+    [Fact]
+    public void A_Time_Claims_No_Format_Because_The_Dialect_Means_Something_Stricter()
+    {
+        var document = Schema(Theo.String().Iso8601Time());
+
+        Assert.Null(document["format"]);
+        Assert.Equal("""{"type":"string"}""", document.ToJsonString());
+    }
+
+    [Fact]
     public void An_Integer_And_A_Number_Are_Told_Apart_By_Their_Type()
     {
         Assert.Equal("integer", Schema(Theo.Int())["type"]!.GetValue<string>());

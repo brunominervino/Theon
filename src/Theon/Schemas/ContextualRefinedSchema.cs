@@ -14,13 +14,12 @@ namespace Theon.Schemas;
 // unacceptable -- the same order the asynchronous refinement uses, and for the same reason.
 internal sealed class ContextualRefinedSchema<T>(Schema<T> inner, RefineRule<T> rule) : Schema<T>
 {
-    internal override SchemaDescription Describe(DescriptionContext context)
+    /// <inheritdoc />
+    public override SchemaDescription Describe(DescriptionContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        var described = context.Describe(inner);
-        described.CannotRepresent("Refine");
-        return described;
+        return context.Describe(inner).CannotRepresent("Refine");
     }
 
     public override bool TryParse(ref ParseContext context, T input, out T output)

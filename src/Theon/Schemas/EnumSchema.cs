@@ -81,16 +81,17 @@ public sealed class EnumSchema<TEnum> : Schema<TEnum>
     // A flags enum gets no enumeration at all: the acceptable values are every combination of the
     // declared bits, which is not a list worth writing down and is not what "enum" means in the
     // dialect.
-    internal override SchemaDescription Describe(DescriptionContext context)
+    /// <inheritdoc />
+    public override SchemaDescription Describe(DescriptionContext context)
     {
-        var description = CheckDescription.Of(SchemaKind.String, _checks);
+        var description = CheckDescription.Build(SchemaKind.String, _checks);
 
         if (!IsFlags)
         {
             description.AllowedValues = [.. Enum.GetNames<TEnum>()];
         }
 
-        return description;
+        return description.ToDescription();
     }
 
     /// <inheritdoc />

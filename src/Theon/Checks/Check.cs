@@ -34,7 +34,7 @@ internal abstract class Check<T>
     // What it does contribute is the fact that it could not be expressed, so that a caller who asked
     // to be told about that can be. Every rule that has nothing to say is reported by not overriding
     // this, which means a rule added later is covered without anyone remembering to cover it.
-    internal virtual void Describe(SchemaDescription description)
+    internal virtual void Describe(SchemaDescriptionBuilder description)
     {
         ArgumentNullException.ThrowIfNull(description);
         description.CannotRepresent(RuleName);
