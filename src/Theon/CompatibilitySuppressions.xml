@@ -2,7 +2,7 @@
 <!--
   Deliberate breaks against the baseline release, and the reason each is acceptable.
 
-  Empty: there is nothing suppressed against 0.1.0-preview.7.
+  Empty: there is nothing suppressed against 0.1.0-preview.8.
 
   Entries here are scoped to the baseline they were generated against, so this file is cleared
   whenever PackageValidationBaselineVersion is raised. A stale suppression silently permits the
