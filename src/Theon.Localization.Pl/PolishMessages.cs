@@ -139,7 +139,12 @@ public static class PolishMessages
         "uppercase" => "Nie może zawierać małych liter.",
         "lowercase" => "Nie może zawierać wielkich liter.",
         null => "Nieprawidłowy format.",
-        _ => null,
+
+        // Format nazwany przez wywołującego, jak Matches(pattern, "cnpj"). Zwrócenie null tutaj
+        // sprawiało, że zdanie spadało do angielskiego, co jest gorsze niż utrata nazwy:
+        // odpowiedź wychodzi w dwoch jezykach. Nazwa stoi po dwukropku, bo jej odmiana jest
+        // nieznana -- nic tutaj nie zna rodzaju nazwy wybranej przez kogoś innego.
+        _ => Format($"Nieprawidłowy format: {error.Format}."),
     };
 
     // One, a few, or many -- and which of the three depends on the last two digits, not just the last

@@ -122,7 +122,12 @@ public static class DutchMessages
         "uppercase" => "Mag geen kleine letters bevatten.",
         "lowercase" => "Mag geen hoofdletters bevatten.",
         null => "Ongeldige indeling.",
-        _ => null,
+
+        // Een indeling die de aanroeper zelf benoemde, zoals Matches(pattern, "cnpj"). Hier null
+        // teruggeven liet de zin terugvallen op het Engels, wat erger is dan de naam kwijtraken:
+        // het antwoord komt er in twee talen uit. De naam staat na de dubbele punt, zodat hij
+        // niet in de zinsbouw hoeft te passen.
+        _ => Format($"Ongeldige indeling: {error.Format}."),
     };
 
     // Getting the singular wrong is the tell of a translation that was pasted rather than written.

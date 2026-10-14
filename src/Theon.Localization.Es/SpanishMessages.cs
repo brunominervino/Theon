@@ -139,7 +139,12 @@ public static class SpanishMessages
         "uppercase" => "No puede contener minúsculas.",
         "lowercase" => "No puede contener mayúsculas.",
         null => "Formato no válido.",
-        _ => null,
+
+        // Un formato que el llamador nombró, como Matches(pattern, "cnpj"). Devolver null aquí
+        // hacía que la frase cayera al inglés, lo que es peor que perder el nombre: la respuesta
+        // sale en dos idiomas. El nombre va tras los dos puntos porque su concordancia es
+        // desconocida -- nada aquí sabe el género de un nombre que eligió otra persona.
+        _ => Format($"Formato no válido: {error.Format}."),
     };
 
     // Getting the singular wrong is the tell of a translation that was pasted rather than written.

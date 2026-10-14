@@ -135,7 +135,12 @@ public static class GermanMessages
         "uppercase" => "Darf keine Kleinbuchstaben enthalten.",
         "lowercase" => "Darf keine Großbuchstaben enthalten.",
         null => "Ungültiges Format.",
-        _ => null,
+
+        // Ein Format, das der Aufrufer benannt hat, etwa Matches(pattern, "cnpj"). Hier null
+        // zurückzugeben ließ den Satz ins Englische fallen, was schlimmer ist als den Namen zu
+        // verlieren: die Antwort kommt in zwei Sprachen heraus. Der Name steht nach dem
+        // Doppelpunkt, weil er so in keinen Satzbau eingreift.
+        _ => Format($"Ungültiges Format: {error.Format}."),
     };
 
     // Getting the singular wrong is the tell of a translation that was pasted rather than written.

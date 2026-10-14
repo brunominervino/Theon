@@ -224,6 +224,15 @@ public class LanguageMessagesTests
                 Maximum = 5_000_000L,
                 Inclusive = true,
             }),
+
+            // A format the caller named, which Matches(pattern, "cnpj") reports. A provider that does
+            // not recognise it used to return null, so the sentence fell through to English and the
+            // response came out in two languages -- which is worse than losing the name.
+            ("a format the caller named", new ValidationErrorInfo
+            {
+                Code = ValidationErrorCode.InvalidFormat,
+                Format = "cnpj",
+            }),
         };
 
         foreach (var (what, info) in cases)
@@ -234,6 +243,27 @@ public class LanguageMessagesTests
                 string.IsNullOrWhiteSpace(message),
                 $"{culture} has no sentence for {what}, so it would fall back to English.");
         }
+    }
+
+    // Saying "invalid format" for a name the caller chose would be the null case with extra steps. The
+    // name has to reach the sentence, so that an error about a CNPJ says CNPJ.
+    [Theory]
+    [MemberData(nameof(Providers))]
+    public void A_Format_The_Caller_Named_Reaches_The_Sentence(
+        string culture,
+        SchemaErrorMessageProvider provider)
+    {
+        var info = new ValidationErrorInfo
+        {
+            Code = ValidationErrorCode.InvalidFormat,
+            Format = "cnpj",
+        };
+
+        var message = provider(in info);
+
+        Assert.True(
+            message?.Contains("cnpj", StringComparison.Ordinal) == true,
+            $"{culture} dropped the format name, so an error about a CNPJ does not say CNPJ.");
     }
 
     [Theory]

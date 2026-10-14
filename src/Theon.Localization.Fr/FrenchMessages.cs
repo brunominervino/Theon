@@ -140,7 +140,12 @@ public static class FrenchMessages
         "uppercase" => "Ne doit pas contenir de minuscules.",
         "lowercase" => "Ne doit pas contenir de majuscules.",
         null => "Format non valide.",
-        _ => null,
+
+        // Un format nommé par l'appelant, comme Matches(pattern, "cnpj"). Renvoyer null ici
+        // faisait retomber la phrase en anglais, ce qui est pire que de perdre le nom : la
+        // réponse sort en deux langues. Le nom suit les deux points parce que son accord est
+        // inconnu -- rien ici ne connaît le genre d'un nom choisi par quelqu'un d'autre.
+        _ => Format($"Format non valide : {error.Format}."),
     };
 
     // French keeps the singular for one, like English. Getting it wrong is the tell of a translation

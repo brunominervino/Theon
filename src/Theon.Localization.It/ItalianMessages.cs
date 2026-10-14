@@ -118,7 +118,12 @@ public static class ItalianMessages
         "uppercase" => "Non può contenere minuscole.",
         "lowercase" => "Non può contenere maiuscole.",
         null => "Formato non valido.",
-        _ => null,
+
+        // Un formato nominato dal chiamante, come Matches(pattern, "cnpj"). Restituire null qui
+        // faceva cadere la frase in inglese, che è peggio che perdere il nome: la risposta esce
+        // in due lingue. Il nome va dopo i due punti perché la sua concordanza è ignota --
+        // niente qui sa il genere di un nome scelto da qualcun altro.
+        _ => Format($"Formato non valido: {error.Format}."),
     };
 
     // Getting the singular wrong is the tell of a translation that was pasted rather than written.
