@@ -208,6 +208,20 @@ public class BrazilianPortugueseMessagesTests
         }
     }
 
+    // Um formato que o chamador nomeou. Sem esta frase a resposta saia em duas linguas: o nome do
+    // formato chega ao erro, o provedor nao o reconhecia e o ingles respondia por ele.
+    [Fact]
+    public void A_Format_The_Caller_Named_Has_A_Sentence()
+    {
+        var info = new ValidationErrorInfo
+        {
+            Code = ValidationErrorCode.InvalidFormat,
+            Format = "cnpj",
+        };
+
+        Assert.Equal("Formato inválido: cnpj.", BrazilianPortugueseMessages.For(in info));
+    }
+
     [Fact]
     public void The_Uri_Formats_Have_Sentences()
     {

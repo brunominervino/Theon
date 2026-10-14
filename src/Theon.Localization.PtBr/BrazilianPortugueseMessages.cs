@@ -141,7 +141,12 @@ public static class BrazilianPortugueseMessages
         "uppercase" => "Não pode conter letras minúsculas.",
         "lowercase" => "Não pode conter letras maiúsculas.",
         null => "Formato inválido.",
-        _ => null,
+
+        // Um formato que o chamador nomeou, como Matches(pattern, "cnpj"). Devolver null aqui fazia a
+        // frase cair no inglês, que é pior que perder o nome: a resposta sai em duas línguas. O nome
+        // vem depois dos dois-pontos porque a concordância dele é desconhecida -- "placa inválido"
+        // estaria errado, e nada aqui sabe o gênero de um nome que o chamador escolheu.
+        _ => Format($"Formato inválido: {error.Format}."),
     };
 
     // "1 caractere" against "2 caracteres": getting this wrong is the tell of a translation that
