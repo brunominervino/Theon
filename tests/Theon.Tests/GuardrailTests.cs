@@ -65,7 +65,10 @@ public class GuardrailTests
     // Theo.Boolean. It was left out on the argument that a bool has nothing to validate, which is true
     // of the value and false of everything around it: without a Schema<bool> a boolean property could
     // not be bound to a field, so an object holding one had no entry for it in any generated document.
-    private const int PublicTypeCount = 61;
+    // 61 -> 62 types and 392 -> 393 members: MessageProviders.Chain. A provider returning null already
+    // declined and fell through to the English defaults; what was missing was any way to put two
+    // providers in that order, which is the shape every application with rules of its own needs.
+    private const int PublicTypeCount = 62;
 
     // 382 -> 383: Theo.JsonSchema, which reads a document back into a schema. One method for the
     // whole of the reverse direction, because everything underneath it -- the reader, the validator,
@@ -78,7 +81,7 @@ public class GuardrailTests
     // and one Refine overload that sets it. Codes are the contract and every refinement produced the
     // same one, so a caller who needed to know which refinement failed had only the message -- which
     // the error model says is not a contract. The enum is untouched, so nothing switching on it moves.
-    private const int PublicMemberCount = 392;
+    private const int PublicMemberCount = 393;
 
     // Generous by three orders of magnitude. A non-backtracking match of forty thousand characters
     // takes well under a millisecond; a backtracking one over the same input does not finish this
