@@ -61,7 +61,11 @@ public class GuardrailTests
     // count and needs its own sentence for the same reason; contentMediaType is how 2020-12 and
     // OpenAPI 3.1 say "this string carries content of this type", which is what a multipart file is.
     // Neither mentions a file, and neither pulls ASP.NET Core anywhere near the core package.
-    private const int PublicTypeCount = 60;
+    // 60 -> 61 types and 384 -> 389 members: BooleanSchema with Refine, AllowNull and Describe, plus
+    // Theo.Boolean. It was left out on the argument that a bool has nothing to validate, which is true
+    // of the value and false of everything around it: without a Schema<bool> a boolean property could
+    // not be bound to a field, so an object holding one had no entry for it in any generated document.
+    private const int PublicTypeCount = 61;
 
     // 382 -> 383: Theo.JsonSchema, which reads a document back into a schema. One method for the
     // whole of the reverse direction, because everything underneath it -- the reader, the validator,
@@ -70,7 +74,7 @@ public class GuardrailTests
     // produces a schema of that kind -- a C# type that can hold only null is not a type anybody
     // writes -- but a document read with Theo.JsonSchema may say it, and reading "only null" as "no
     // constraint" accepted every value where the document accepted one.
-    private const int PublicMemberCount = 384;
+    private const int PublicMemberCount = 389;
 
     // Generous by three orders of magnitude. A non-backtracking match of forty thousand characters
     // takes well under a millisecond; a backtracking one over the same input does not finish this

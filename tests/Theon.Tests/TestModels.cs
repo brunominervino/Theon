@@ -184,3 +184,10 @@ public sealed class Catalogue
     public IReadOnlyDictionary<string, decimal> Prices { get; set; } =
         new Dictionary<string, decimal>();
 }
+
+public sealed class Consent
+{
+    public bool Accepted { get; set; }
+
+    public bool? Newsletter { get; set; }
+}

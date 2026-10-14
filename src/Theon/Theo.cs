@@ -59,6 +59,15 @@ public static class Theo
     public static NumberSchema<T> Number<T>()
         where T : struct, INumber<T> => new();
 
+    /// <summary>Starts a schema for a <see cref="bool"/>.</summary>
+    /// <remarks>
+    /// There is nothing to validate about the value itself. This exists so that a boolean property can
+    /// be bound to a field and therefore appear in a generated document; without it an object holding
+    /// one could not be described at all. Demanding one particular value is
+    /// <see cref="Literal{T}(T, string)"/>.
+    /// </remarks>
+    public static BooleanSchema Boolean() => new();
+
     /// <summary>Starts a schema for a <see cref="System.Guid"/>.</summary>
     public static GuidSchema Guid() => new();
 
