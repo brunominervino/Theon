@@ -82,9 +82,11 @@ with code of its own.
 - **An enum publishes the names it serializes under.** `[JsonStringEnumMemberName("editar")]` is
   read, so `enum` lists `editar` where the document used to list `Editar`. A member that named itself
   keeps that name; members that said nothing take `EnumMemberNamingPolicy`.
-- **The Portuguese provider says a caller's format name** instead of falling through to English, which
-  used to produce a response in two languages. The same one-line gap remains in the other seven
-  language packages.
+- **Every language package says a caller's format name** instead of falling through to English, which
+  used to produce a response in two languages. The name goes after a colon, because the agreement of a
+  name somebody else chose is unknowable. Two tests hold it: one fails a provider that declines, and
+  one fails a provider that answers without the name — "invalid format" for a name the caller chose is
+  the unnamed case with extra steps.
 
 ### Breaking
 
