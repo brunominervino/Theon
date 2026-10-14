@@ -81,7 +81,13 @@ public class GuardrailTests
     // and one Refine overload that sets it. Codes are the contract and every refinement produced the
     // same one, so a caller who needed to know which refinement failed had only the message -- which
     // the error model says is not a contract. The enum is untouched, so nothing switching on it moves.
-    private const int PublicMemberCount = 393;
+    // 393 -> 397 members: a naming policy on ParseOptions, on SchemaGlobalOptions, on
+    // JsonSchemaOptions and on DescriptionContext. An error path and a document property both came out
+    // as the C# member name, which is the one name nobody on the wire uses: an application
+    // serializing camelCase returned ZipCode in the error and received zipCode in the body, so a form
+    // could not key one by the other. Four properties because the two halves are configured in
+    // different places and a custom schema has to be able to read the one that reached it.
+    private const int PublicMemberCount = 397;
 
     // Generous by three orders of magnitude. A non-backtracking match of forty thousand characters
     // takes well under a millisecond; a backtracking one over the same input does not finish this

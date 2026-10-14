@@ -42,4 +42,17 @@ public sealed class ParseOptions
     /// </para>
     /// </remarks>
     public int MaxDepth { get; init; } = 64;
+
+    /// <summary>Gets the policy that renames a property on its way out.</summary>
+    /// <remarks>
+    /// <para>
+    /// <see langword="null"/> by default, which is the C# member name and what every release so far
+    /// produced. Set it to <see cref="System.Text.Json.JsonNamingPolicy.CamelCase"/>, or to whatever
+    /// the application serializes with, and a name a caller sees matches the name they sent.
+    /// </para>
+    /// <para>
+    /// An index is a position and not a name, so a policy does nothing to it.
+    /// </para>
+    /// </remarks>
+    public System.Text.Json.JsonNamingPolicy? PropertyNamingPolicy { get; init; }
 }

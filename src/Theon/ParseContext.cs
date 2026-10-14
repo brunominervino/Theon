@@ -172,6 +172,22 @@ public ref struct ParseContext
             segments[i] = _overflowPath![i - InlinePathCapacity];
         }
 
+        // Renamed here and nowhere else. This is the one moment a path becomes something anybody
+        // reads, and it only happens once an error has already decided to allocate -- so a valid value
+        // pays nothing for the policy, and every rendering downstream agrees without being told.
+        var policy = Options.PropertyNamingPolicy ?? SchemaGlobalOptions.PropertyNamingPolicy;
+
+        if (policy is not null)
+        {
+            for (var i = 0; i < segments.Length; i++)
+            {
+                if (segments[i].Name is { } name)
+                {
+                    segments[i] = PathSegment.Property(policy.ConvertName(name));
+                }
+            }
+        }
+
         return new ValidationPath(segments);
     }
 

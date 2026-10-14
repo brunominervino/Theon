@@ -95,6 +95,20 @@ public sealed class JsonSchemaOptions
     /// </example>
     public JsonSchemaAmendment? Amend { get; init; }
 
+    /// <summary>Gets the policy that renames a property on its way into the document.</summary>
+    /// <remarks>
+    /// <para>
+    /// <see langword="null"/> by default, which is the C# member name and what every release so far
+    /// produced. Set it to whatever the application serializes with and the document names the fields
+    /// a caller actually sends.
+    /// </para>
+    /// <para>
+    /// This renames the keys of <c>properties</c> and the entries of <c>required</c>. It does not
+    /// touch the keys of a map, which are values rather than members and are whatever the data holds.
+    /// </para>
+    /// </remarks>
+    public System.Text.Json.JsonNamingPolicy? PropertyNamingPolicy { get; init; }
+
     /// <summary>Gets which side of the schema the document describes.</summary>
     /// <remarks>
     /// <para>
@@ -255,7 +269,10 @@ public static class JsonSchemaExtensions
             JsonSchemaOptions options,
             bool inlineDefinitions)
     {
-        var context = new DescriptionContext(options.ReferencePrefix, options.Direction);
+        var context = new DescriptionContext(
+            options.ReferencePrefix,
+            options.Direction,
+            options.PropertyNamingPolicy);
         var described = context.Describe(schema);
 
         var writer = new JsonSchemaWriter(options.Amend);

@@ -18,6 +18,9 @@ public static class SchemaDescriptionExtensions
     /// Schema's spelling; a generator for another format should pass whatever its own references look
     /// like, or an empty string to get the bare names.
     /// </param>
+    /// <param name="policy">
+    /// The policy a property name is written with, or <see langword="null"/> for the C# member name.
+    /// </param>
     /// <returns>The description, with whatever repeated kept beside it.</returns>
     /// <remarks>
     /// <para>
@@ -50,12 +53,13 @@ public static class SchemaDescriptionExtensions
     public static SchemaDescriptionSet Describe<TInput, TOutput>(
         this Schema<TInput, TOutput> schema,
         DescriptionDirection direction = DescriptionDirection.Input,
-        string referencePrefix = "#/$defs/")
+        string referencePrefix = "#/$defs/",
+        System.Text.Json.JsonNamingPolicy? policy = null)
     {
         ArgumentNullException.ThrowIfNull(schema);
         ArgumentNullException.ThrowIfNull(referencePrefix);
 
-        var context = new DescriptionContext(referencePrefix, direction);
+        var context = new DescriptionContext(referencePrefix, direction, policy);
 
         return new SchemaDescriptionSet(context.Describe(schema), context.Definitions);
     }

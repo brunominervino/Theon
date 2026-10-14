@@ -47,7 +47,11 @@ internal sealed class FieldBinding<T, TValue, TParsed>(
     internal override PropertyDescription Describe(DescriptionContext context)
     {
         var described = context.Describe(schema);
-        return new PropertyDescription(name, described, !described.AllowsNull);
+
+        return new PropertyDescription(
+            context.PropertyNamingPolicy?.ConvertName(name) ?? name,
+            described,
+            !described.AllowsNull);
     }
 
     internal override async ValueTask RunAsync(AsyncParseContext context, T instance)

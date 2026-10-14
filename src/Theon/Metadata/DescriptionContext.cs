@@ -28,10 +28,14 @@ public sealed class DescriptionContext
     private readonly string _referencePrefix;
     private int _depth;
 
-    internal DescriptionContext(string referencePrefix, DescriptionDirection direction)
+    internal DescriptionContext(
+        string referencePrefix,
+        DescriptionDirection direction,
+        System.Text.Json.JsonNamingPolicy? propertyNamingPolicy = null)
     {
         _referencePrefix = referencePrefix;
         Direction = direction;
+        PropertyNamingPolicy = propertyNamingPolicy;
     }
 
     /// <summary>Gets which side of each schema is being described.</summary>
@@ -42,6 +46,14 @@ public sealed class DescriptionContext
     /// <see cref="Describe"/> propagates it without having to know it exists.
     /// </remarks>
     public DescriptionDirection Direction { get; }
+
+    /// <summary>Gets the policy a property name is written with, if the caller chose one.</summary>
+    /// <remarks>
+    /// Applied by whatever names a property, which for every schema this library ships is the field
+    /// binding. A custom schema that names properties of its own should apply it too, or the document
+    /// it produces will spell half its keys one way and half the other.
+    /// </remarks>
+    public System.Text.Json.JsonNamingPolicy? PropertyNamingPolicy { get; }
 
     // Not part of the contract. Exposing it would fix $defs as a dictionary for ever, and a schema
     // describing its children has no need of it.
