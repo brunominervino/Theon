@@ -95,12 +95,24 @@ internal sealed class OverwriteCheck(Func<string, string> transform) : Check<str
     internal override void Run(ref ParseContext context, ref string value) => value = transform(value);
 }
 
-internal sealed class PatternCheck(Regex pattern, string format) : Check<string>
+internal sealed class PatternCheck(Regex pattern, string format, bool callerNamed = false)
+    : Check<string>
 {
-    // A format this library names and JSON Schema also names becomes that format. Anything
-    // else becomes the pattern itself, which is exact and needs no agreement between the two
-    // vocabularies. Only one of the two is written: a format and a pattern side by side invite
-    // a reader to wonder which one wins.
+    // A format this library names and JSON Schema also names becomes that format, and only that: a
+    // format and a pattern side by side invite a reader to wonder which one wins, and for these two
+    // the format is the better-known half.
+    //
+    // A name the caller chose is a different thing, and this is where it used to be dropped.
+    // Matches(pattern, "cnpj") carried "cnpj" as far as the error -- which reads "Invalid cnpj." --
+    // and the document said only the pattern, so nothing generated from it knew the rule had a name.
+    // Both go out now. 2020-12 puts format in an annotation vocabulary and requires an unrecognised
+    // value to be ignored rather than to fail, so a name of the caller's own is safe there by
+    // specification; an x-format of our own invention would be safe too and nothing would read it.
+    // The pattern stays beside it because the pattern is the rule and the name is only its name.
+    //
+    // A name this library chose and JSON Schema has not is still written as the pattern alone.
+    // "format": "lowercase" says nothing to any tool, and "base64" has a spelling of its own in this
+    // dialect that is not format.
     internal override void Describe(SchemaDescriptionBuilder description)
     {
         var known = format switch
@@ -116,6 +128,12 @@ internal sealed class PatternCheck(Regex pattern, string format) : Check<string>
         {
             description.Format = known;
             return;
+        }
+
+        // "regex" is what Matches defaults to when the caller named nothing, so it is not a name.
+        if (callerNamed && format != "regex")
+        {
+            description.Format = format;
         }
 
         description.Pattern = pattern.ToString();

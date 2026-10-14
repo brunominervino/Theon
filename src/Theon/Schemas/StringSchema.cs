@@ -338,7 +338,7 @@ public sealed class StringSchema : Schema<string>
     {
         ArgumentNullException.ThrowIfNull(pattern);
         ArgumentException.ThrowIfNullOrEmpty(format);
-        return With(new PatternCheck(pattern, format) { Message = message });
+        return With(new PatternCheck(pattern, format, callerNamed: true) { Message = message });
     }
 
     /// <summary>Requires the value to contain no uppercase ASCII letter.</summary>
