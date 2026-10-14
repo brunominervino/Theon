@@ -39,12 +39,44 @@ public sealed class TheonSchemaMetadata
 {
     private readonly Func<JsonSchemaOptions?, JsonSchemaDocument> _describe;
 
-    internal TheonSchemaMetadata(
+    private TheonSchemaMetadata(
         Type validatedType,
         Func<JsonSchemaOptions?, JsonSchemaDocument> describe)
     {
         ValidatedType = validatedType;
         _describe = describe;
+    }
+
+    /// <summary>Describes <paramref name="schema"/> as metadata an endpoint can carry.</summary>
+    /// <typeparam name="T">The type the schema validates.</typeparam>
+    /// <param name="schema">The schema guarding the endpoint.</param>
+    /// <remarks>
+    /// <para>
+    /// <c>Validate</c> attaches one of these itself. This exists for the filter somebody else wrote:
+    /// an application that validates its own way still wants whatever produces its OpenAPI description
+    /// to find the schema, and until this was public only this package could put one on an endpoint.
+    /// </para>
+    /// <para>
+    /// A factory rather than a constructor, because what it needs is a schema. The constructor takes a
+    /// function producing a document, which is how this package defers the work, and that is an
+    /// implementation detail nobody outside should have to know about.
+    /// </para>
+    /// </remarks>
+    /// <example>
+    /// <code>
+    /// builder.AddEndpointFilter(new MyValidationFilter&lt;CreateUser&gt;(CreateUserSchema))
+    ///        .WithMetadata(TheonSchemaMetadata.For(CreateUserSchema));
+    /// </code>
+    /// </example>
+    public static TheonSchemaMetadata For<T>(Schema<T> schema)
+        where T : notnull
+    {
+        ArgumentNullException.ThrowIfNull(schema);
+
+        // The document is not produced here. A description is generated at most once, by whatever asks
+        // for it, and an application that never produces one should not pay for every endpoint having
+        // a schema.
+        return new TheonSchemaMetadata(typeof(T), options => schema.ToJsonSchemaDocument(options));
     }
 
     /// <summary>Gets the type the endpoint validates.</summary>
