@@ -350,6 +350,12 @@ foreach (var (name, definition) in described.Definitions)   // whatever repeated
 }
 ```
 
+**A format you named reaches the document.** `Matches(pattern, "cnpj")` used to write the pattern and
+drop the name; it now writes `format: "cnpj"` beside it. The dialect puts `format` in an annotation
+vocabulary and requires an unrecognised value to be ignored rather than to fail, so a name of your own
+is safe there by specification — and both go out because they are different things: the pattern is the
+rule and the format is only its name.
+
 **A document has a side.** A schema that transforms accepts one shape and produces another, and a
 request body and a response body are the two different documents that come out of it:
 
@@ -366,6 +372,30 @@ schema.ToJsonSchema(new JsonSchemaOptions { Direction = DescriptionDirection.Out
 before this option existed said. The output side is where the follow-on schema earns its keep: with
 one, the converted value describes itself completely and nothing is left out; without one there is a
 type and no schema, so the document says `integer` and admits that is all it knows.
+
+**A normalization decides which side a rule belongs to.** A rule written after one is checked against
+the normalized value, so it is not a constraint on what arrived:
+
+```csharp
+var cnpj = Theo.String().Trim().ToUpperInvariant().Matches(Formato, "cnpj");
+
+cnpj.IsValid("  abc  ");   // true -- the server trims and upper-cases first
+
+cnpj.ToJsonSchema();       // { "type": "string" } -- and says so if you ask
+cnpj.ToJsonSchema(new JsonSchemaOptions { Direction = DescriptionDirection.Output });
+                           // { "type": "string", "format": "cnpj", "pattern": "..." }
+```
+
+The request side used to claim the pattern, so a client generated from it refused exactly the values
+this endpoint takes. A document weaker than the server is incomplete; a document stronger than it is
+wrong, and wrong never reaches anybody who could diagnose it. On the output side it is the rules
+*before* the normalization that go, for the mirror reason: `MinLength(3).Trim()` accepts `"  a  "` and
+produces one character.
+
+Dropped rather than narrowed, and uniformly: `Normalize` takes an arbitrary function and guarantees
+nothing, so there is no general rule, and a document whose completeness depended on which of two
+interchangeable spellings you reached for would be worse than one uniformly incomplete. Where you know
+more than the library does, `Amend` puts a keyword back.
 
 Six wrappers differ between the two sides, and two that look as though they should do not.
 `Required()` is declared `Schema<T?>` and never produces a null, because the only null that leaves it
@@ -405,6 +435,30 @@ checked. A keyword that asserts nothing is ignored, as the dialect requires.
 The two directions are checked against each other rather than asserted: a document generated from a
 schema, read back, and generated again has to be the same document, for every shape this library
 writes.
+
+**Names come out the way you serialize them.** An error path and a document property used to be the
+C# member name, which is the one name nobody on the wire uses:
+
+```csharp
+// once, at start-up
+SchemaGlobalOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+
+// endereco.cep, itens[0].valor -- the keys a form matches against the body it sent
+schema.ToJsonSchema(new JsonSchemaOptions
+{
+    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+    EnumMemberNamingPolicy = JsonNamingPolicy.CamelCase,
+});
+```
+
+Both default to nobody's policy, which is the member name. An index is a position rather than a name
+and a map's keys are values rather than members, so neither is touched. The enum policy is separate
+on purpose: `System.Text.Json` configures the two independently, so reading one off the other would
+put a wrong `enum` list into the document for anybody who set only the first.
+
+**An enum publishes the names it serializes under.** `[JsonStringEnumMemberName("editar")]` is read,
+so `enum` lists what the wire carries rather than what the C# member is called. A member that named
+itself keeps that name; members that said nothing take the policy.
 
 **Errors arrive in the shape you render.** Grouping a flat list by field is a loop every caller
 would otherwise write, and get subtly wrong at the root level:
@@ -458,6 +512,35 @@ its enumerator and a set has no indexer to use instead.
 
 A tuple needs nothing new: `Theo.Object<(string Name, int Age)>()` already works, and so does a
 `char` — as `Theo.OneOf("...", Theo.Literal('Y'), Theo.Literal('N'))`.
+
+**A boolean needs a schema too.** `Theo.Boolean()` validates nothing about the value, because a
+`bool` is one of two things and the compiler settled which. It exists for everything around the
+value: a boolean property needs a schema to be bound to a field at all, and without one an object
+holding a boolean had no entry for it in any generated document.
+
+```csharp
+Theo.Object<Consent>()
+    .Field(x => x.Accepted, Theo.Boolean())
+    .Field(x => x.Newsletter, Theo.Boolean().AllowNull());   // the three-state checkbox
+```
+
+There is no `IsTrue`. Demanding one particular value is `Theo.Literal(true)`, which already says that
+and writes `const: true`.
+
+**A rule can carry a code of your own.** Codes are the contract and messages are not — and every
+refinement reported the same code, `Custom`, which says a caller-supplied rule rejected the value and
+nothing about which one:
+
+```csharp
+Theo.String().Trim().Length(14).Refine(
+    IsValidCnpj, "Informe um CNPJ válido.", "cnpj.digito_verificador");
+
+// error.Code       == ValidationErrorCode.Custom     (unchanged, so nothing switching on it moves)
+// error.CustomCode == "cnpj.digito_verificador"
+```
+
+Pass `message: null` instead and the message chain runs, so a provider that recognises the code
+writes the sentence — which is how a language package says one particular rule in its own words.
 
 **Objects can be structs.** `Theo.Object<T>()` takes a class, a record, a struct or a record
 struct. A struct parses within noise of the equivalent class and neither allocates.
@@ -548,6 +631,48 @@ in the same three lines — and the compiler checks the schema matches the type 
 Validation runs asynchronously, so a schema with a `RefineAsync` rule works here with no extra
 ceremony, and the request's cancellation token reaches it.
 
+**The failure answers the way you say.** It was 400 with a message per path and nothing else — no way
+to answer 422, no identifier a client could branch on, and no code on the individual errors, so a
+client had to recognise a rule by its message text:
+
+```csharp
+builder.Services.AddTheon(options =>
+{
+    options.Status = StatusCodes.Status422UnprocessableEntity;
+    options.Title = "Falha de validação";
+    options.Code = "validacao";
+    options.IncludeErrorCodes = true;
+    options.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+});
+```
+
+```json
+{
+  "status": 422,
+  "title": "Falha de validação",
+  "code": "validacao",
+  "errors": {
+    "cnpj": [{ "message": "Informe um CNPJ válido.", "code": "cnpj.digito_verificador" }],
+    "idade": [{ "message": "Deve ser maior ou igual a 18.", "code": "TooSmall" }]
+  }
+}
+```
+
+Every default is what this package answered before, so an application that configures nothing sees no
+change — and `IncludeErrorCodes` changes the shape of `errors`, which is why it is opt-in. One
+endpoint that answers differently says so itself: `.Validate(schema, options => …)`.
+
+**A filter of your own can publish the same metadata.** The constructor was internal, so only this
+package could put a schema on an endpoint, and an application validating its own way had no way to
+tell a document generator what the endpoint requires:
+
+```csharp
+builder.AddEndpointFilter(new MyValidationFilter<CreateUser>(CreateUserSchema))
+       .WithMetadata(TheonSchemaMetadata.For(CreateUserSchema));
+```
+
+Whatever reads the metadata cannot tell which filter put it there, which is the point.
+
 **Uploaded files have a factory of their own.** `IFormFile` is an ASP.NET Core type, so a schema for
 one cannot be built from `Theo`, which lives in a package with no dependencies and is keeping it:
 
@@ -584,6 +709,15 @@ built in, and why adding one changes nothing in the core:
 ```csharp
 // Once, at start-up:
 SchemaGlobalOptions.MessageProvider = BrazilianPortugueseMessages.Provider;
+```
+
+Where the application has rules of its own, put its provider in front of the language package. The
+first to answer wins and one returning `null` hands on:
+
+```csharp
+SchemaGlobalOptions.MessageProvider = MessageProviders.Chain(
+    NucleoMessages.Provider,                 // names this application's own rules, by their code
+    BrazilianPortugueseMessages.Provider);   // says everything else in Portuguese
 ```
 
 ```

@@ -83,6 +83,16 @@ here because the type is the library's primary output.
 
 The machine-readable identity of an error. Codes are the contract that callers may branch on.
 
+## Custom code
+
+An error code the caller chose, beside the one the library did.
+
+**Error code** is this library's vocabulary and is closed; a custom code is the application's, and is
+a string it names itself: `cnpj.digito_verificador`. Both are contracts a caller may branch on. We say
+**custom code** for the second and never "user code": "user" in this project is the person filling in
+the form, not the programmer. See `docs/decisions/0018-names-on-the-wire.md` for the naming policies
+and `ValidationErrorInfo.CustomCode` for the property.
+
 ## Message
 
 The human-readable text of an error. A message is never a contract: it is localizable and
@@ -132,10 +142,24 @@ rules cannot: why a field exists, what a refinement is checking, which of severa
 is preferred. We say **annotation** for this and **message** for the text of an error; they are both
 prose and they are read by different people at different times.
 
+## Naming policy
+
+How a name reaches a caller: the C# member name, or whatever the application serializes with.
+
+A policy applies to the **properties** of a document and to the **property segments** of an error
+path, and a separate one applies to **enum members**, because `System.Text.Json` configures those two
+independently and guessing one from the other is wrong in the place hardest to notice. An index is a
+position and not a name, and a map's keys are values and not members, so a policy touches neither. See
+`docs/decisions/0018-names-on-the-wire.md`.
+
 ## Document
 
 A generated JSON Schema, in the 2020-12 dialect. Produced from a description, never from a schema
 directly.
+
+A document describes **one side** of a schema, and claims a rule only on the side that rule was
+actually checked against: a rule written after a normalization is not a constraint on what arrived.
+See `docs/decisions/0017-a-rule-belongs-to-one-side.md`.
 
 ## Amendment
 
