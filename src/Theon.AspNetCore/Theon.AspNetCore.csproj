@@ -14,7 +14,7 @@
 
   <PropertyGroup>
     <!-- Raised with each release, alongside the core package's own baseline. -->
-    <PackageValidationBaselineVersion>0.1.0-preview.8</PackageValidationBaselineVersion>
+    <PackageValidationBaselineVersion>0.1.0-preview.9</PackageValidationBaselineVersion>
   </PropertyGroup>
 
   <ItemGroup>
