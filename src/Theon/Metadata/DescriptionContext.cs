@@ -31,11 +31,13 @@ public sealed class DescriptionContext
     internal DescriptionContext(
         string referencePrefix,
         DescriptionDirection direction,
-        System.Text.Json.JsonNamingPolicy? propertyNamingPolicy = null)
+        System.Text.Json.JsonNamingPolicy? propertyNamingPolicy = null,
+        System.Text.Json.JsonNamingPolicy? enumMemberNamingPolicy = null)
     {
         _referencePrefix = referencePrefix;
         Direction = direction;
         PropertyNamingPolicy = propertyNamingPolicy;
+        EnumMemberNamingPolicy = enumMemberNamingPolicy;
     }
 
     /// <summary>Gets which side of each schema is being described.</summary>
@@ -54,6 +56,13 @@ public sealed class DescriptionContext
     /// it produces will spell half its keys one way and half the other.
     /// </remarks>
     public System.Text.Json.JsonNamingPolicy? PropertyNamingPolicy { get; }
+
+    /// <summary>Gets the policy an enum member with no name of its own is written with.</summary>
+    /// <remarks>
+    /// Separate from <see cref="PropertyNamingPolicy"/>, because <c>System.Text.Json</c> configures
+    /// the two independently and guessing one from the other puts a wrong list into the document.
+    /// </remarks>
+    public System.Text.Json.JsonNamingPolicy? EnumMemberNamingPolicy { get; }
 
     // Not part of the contract. Exposing it would fix $defs as a dictionary for ever, and a schema
     // describing its children has no need of it.

@@ -87,7 +87,11 @@ public class GuardrailTests
     // serializing camelCase returned ZipCode in the error and received zipCode in the body, so a form
     // could not key one by the other. Four properties because the two halves are configured in
     // different places and a custom schema has to be able to read the one that reached it.
-    private const int PublicMemberCount = 397;
+    // 397 -> 399 members: an enum member naming policy on JsonSchemaOptions and on
+    // DescriptionContext. Separate from the property policy on purpose: System.Text.Json configures
+    // the two independently, and reading one off the other puts a wrong enum list into the document
+    // for anybody who set only the first -- which a generated client turns into a wrong request body.
+    private const int PublicMemberCount = 399;
 
     // Generous by three orders of magnitude. A non-backtracking match of forty thousand characters
     // takes well under a millisecond; a backtracking one over the same input does not finish this

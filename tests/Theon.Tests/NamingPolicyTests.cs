@@ -12,6 +12,12 @@ namespace Theon.Tests;
 /// nobody on the wire uses. An application serializing camelCase got <c>ZipCode</c> in the error it
 /// returned and <c>zipCode</c> in the body it received, so a form could not key one by the other.
 /// </remarks>
+[CollectionDefinition(nameof(NamingPolicyTests), DisableParallelization = true)]
+public class SerializedByGlobalState;
+
+// Sets SchemaGlobalOptions, which is process-wide, so it cannot run beside anything that renders a
+// path. The same reason the one other test touching a global lives in an assembly of its own.
+[Collection(nameof(NamingPolicyTests))]
 public class NamingPolicyTests
 {
     private static readonly ParseOptions CamelCase =

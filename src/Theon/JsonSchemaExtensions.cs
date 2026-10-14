@@ -109,6 +109,23 @@ public sealed class JsonSchemaOptions
     /// </remarks>
     public System.Text.Json.JsonNamingPolicy? PropertyNamingPolicy { get; init; }
 
+    /// <summary>Gets the policy that names an enum member with no name of its own.</summary>
+    /// <remarks>
+    /// <para>
+    /// Deliberately separate from <see cref="PropertyNamingPolicy"/>.
+    /// <c>System.Text.Json</c> configures the two independently — properties through
+    /// <c>JsonSerializerOptions</c> and enum members through <c>JsonStringEnumConverter</c> — so
+    /// reading one off the other would put a wrong list into the document for anybody who set only
+    /// the first, and a wrong <c>enum</c> list becomes a wrong request body in a generated client.
+    /// </para>
+    /// <para>
+    /// A member carrying <c>[JsonStringEnumMemberName]</c> keeps the name it was given: somebody who
+    /// wrote a name down meant that name and not a transformation of it, which is how the converter
+    /// behaves too.
+    /// </para>
+    /// </remarks>
+    public System.Text.Json.JsonNamingPolicy? EnumMemberNamingPolicy { get; init; }
+
     /// <summary>Gets which side of the schema the document describes.</summary>
     /// <remarks>
     /// <para>
@@ -272,7 +289,8 @@ public static class JsonSchemaExtensions
         var context = new DescriptionContext(
             options.ReferencePrefix,
             options.Direction,
-            options.PropertyNamingPolicy);
+            options.PropertyNamingPolicy,
+            options.EnumMemberNamingPolicy);
         var described = context.Describe(schema);
 
         var writer = new JsonSchemaWriter(options.Amend);

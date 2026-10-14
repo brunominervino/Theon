@@ -1,4 +1,5 @@
 using System.Collections.Frozen;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using Theon.Checks;
 using Theon.Errors;
@@ -36,6 +37,13 @@ public sealed class EnumSchema<TEnum> : Schema<TEnum>
         Enum.GetValues<TEnum>().ToFrozenSet();
 
     private static readonly ulong DeclaredBits = ComputeDeclaredBits();
+
+    private static readonly string[] MemberNames = Enum.GetNames<TEnum>();
+
+    // The name each member serializes under, where it said so, and null where it did not. Read once
+    // per enum type in the process, in a static initializer, never during a parse -- the same bargain
+    // the IsFlags lookup above already makes.
+    private static readonly string?[] DeclaredNames = ReadDeclaredNames();
 
     private readonly Check<TEnum>[] _checks;
     private readonly string? _message;
@@ -88,7 +96,7 @@ public sealed class EnumSchema<TEnum> : Schema<TEnum>
 
         if (!IsFlags)
         {
-            description.AllowedValues = [.. Enum.GetNames<TEnum>()];
+            description.AllowedValues = SerializedNames(context.EnumMemberNamingPolicy);
         }
 
         return description.ToDescription();
@@ -124,6 +132,67 @@ public sealed class EnumSchema<TEnum> : Schema<TEnum>
         }
 
         return context.ErrorCount == errorsBefore;
+    }
+
+    // The list a document publishes, which has to be the list the application serializes. A member
+    // that named itself keeps that name: somebody who wrote a name down meant that name and not a
+    // transformation of it, which is how JsonStringEnumConverter treats it too.
+    private static List<object?> SerializedNames(System.Text.Json.JsonNamingPolicy? policy)
+    {
+        var names = new List<object?>(MemberNames.Length);
+
+        for (var i = 0; i < MemberNames.Length; i++)
+        {
+            names.Add(DeclaredNames[i] ?? policy?.ConvertName(MemberNames[i]) ?? MemberNames[i]);
+        }
+
+        return names;
+    }
+
+    // Matched by the attribute's type name rather than by a reference to it.
+    // JsonStringEnumMemberNameAttribute arrived in .NET 9 and this library also targets net8.0, where
+    // the type does not exist -- and there is not one #if in src, which is a property worth keeping.
+    // Reading the name instead costs one string comparison per member, once per enum type, and works
+    // on both targets without the conditional code decision 6 warns about.
+    [System.Diagnostics.CodeAnalysis.UnconditionalSuppressMessage(
+        "Trimming",
+        "IL2090:'this' argument does not satisfy 'DynamicallyAccessedMemberTypes.PublicFields'",
+        Justification =
+            "The fields being read are the members of an enum, which the trimmer does not remove: " +
+            "an enum's fields are its values, and a type kept at all is kept with them. Annotating " +
+            "TEnum instead would push the requirement onto Theo.Enum and from there onto every " +
+            "caller, for a guarantee the runtime already makes. " +
+            "The failure mode if that were ever untrue is a member whose attribute was not found, " +
+            "which falls back to the C# name -- the behaviour before this method existed -- rather " +
+            "than to an exception or a wrong name.")]
+    private static string?[] ReadDeclaredNames()
+    {
+        var declared = new string?[MemberNames.Length];
+
+        foreach (var field in typeof(TEnum).GetFields(BindingFlags.Public | BindingFlags.Static))
+        {
+            var index = Array.IndexOf(MemberNames, field.Name);
+
+            if (index < 0)
+            {
+                continue;
+            }
+
+            foreach (var attribute in field.GetCustomAttributesData())
+            {
+                if (attribute.AttributeType.FullName
+                        is not "System.Text.Json.Serialization.JsonStringEnumMemberNameAttribute"
+                    || attribute.ConstructorArguments.Count != 1
+                    || attribute.ConstructorArguments[0].Value is not string name)
+                {
+                    continue;
+                }
+
+                declared[index] = name;
+            }
+        }
+
+        return declared;
     }
 
     private static bool IsDeclared(TEnum value) =>
