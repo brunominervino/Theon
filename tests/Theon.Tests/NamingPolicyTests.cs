@@ -149,8 +149,10 @@ public class NamingPolicyTests
     [Fact]
     public void A_Custom_Schema_Can_Read_It()
     {
-        var document = AddressSchema.Describe(
-            policy: JsonNamingPolicy.CamelCase).Root.Properties!;
+        var document = AddressSchema.Describe(new JsonSchemaOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        }).Root.Properties!;
 
         Assert.Equal(["street", "zipCode"], document.Select(static p => p.Name));
     }

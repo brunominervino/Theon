@@ -91,7 +91,12 @@ public class GuardrailTests
     // DescriptionContext. Separate from the property policy on purpose: System.Text.Json configures
     // the two independently, and reading one off the other puts a wrong enum list into the document
     // for anybody who set only the first -- which a generated client turns into a wrong request body.
-    private const int PublicMemberCount = 399;
+    // 399 -> 400 members: a Describe overload taking JsonSchemaOptions. The naming policies had to
+    // reach the generator entry point, and adding a parameter to the existing Describe changed its
+    // signature -- which PackageValidation caught as CP0002 against preview.8, correctly. An overload
+    // with a required parameter is unambiguous against one whose parameters are all optional, so the
+    // shipped signature is untouched and the new shape is the better one anyway.
+    private const int PublicMemberCount = 400;
 
     // Generous by three orders of magnitude. A non-backtracking match of forty thousand characters
     // takes well under a millisecond; a backtracking one over the same input does not finish this

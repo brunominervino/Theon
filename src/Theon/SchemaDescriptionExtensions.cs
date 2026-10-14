@@ -18,9 +18,6 @@ public static class SchemaDescriptionExtensions
     /// Schema's spelling; a generator for another format should pass whatever its own references look
     /// like, or an empty string to get the bare names.
     /// </param>
-    /// <param name="policy">
-    /// The policy a property name is written with, or <see langword="null"/> for the C# member name.
-    /// </param>
     /// <returns>The description, with whatever repeated kept beside it.</returns>
     /// <remarks>
     /// <para>
@@ -53,13 +50,49 @@ public static class SchemaDescriptionExtensions
     public static SchemaDescriptionSet Describe<TInput, TOutput>(
         this Schema<TInput, TOutput> schema,
         DescriptionDirection direction = DescriptionDirection.Input,
-        string referencePrefix = "#/$defs/",
-        System.Text.Json.JsonNamingPolicy? policy = null)
+        string referencePrefix = "#/$defs/")
     {
         ArgumentNullException.ThrowIfNull(schema);
         ArgumentNullException.ThrowIfNull(referencePrefix);
 
-        var context = new DescriptionContext(referencePrefix, direction, policy);
+        var context = new DescriptionContext(referencePrefix, direction);
+
+        return new SchemaDescriptionSet(context.Describe(schema), context.Definitions);
+    }
+
+    /// <summary>Describes this schema and everything it contains, the way the options say.</summary>
+    /// <typeparam name="TInput">The type the schema accepts.</typeparam>
+    /// <typeparam name="TOutput">The type the schema produces.</typeparam>
+    /// <param name="schema">The schema to describe.</param>
+    /// <param name="options">How to describe it.</param>
+    /// <returns>The description, with whatever repeated kept beside it.</returns>
+    /// <remarks>
+    /// <para>
+    /// The overload to reach for where a naming policy is in play, since a description that names its
+    /// properties one way and a document that names them another is worse than either.
+    /// </para>
+    /// <para>
+    /// Four members of <see cref="JsonSchemaOptions"/> reach a description:
+    /// <see cref="JsonSchemaOptions.Direction"/>,
+    /// <see cref="JsonSchemaOptions.ReferencePrefix"/>,
+    /// <see cref="JsonSchemaOptions.PropertyNamingPolicy"/> and
+    /// <see cref="JsonSchemaOptions.EnumMemberNamingPolicy"/>. The rest describe how a JSON Schema
+    /// document is written and have nothing to say to a generator that writes something else.
+    /// </para>
+    /// </remarks>
+    /// <inheritdoc cref="Describe{TInput, TOutput}(Schema{TInput, TOutput}, DescriptionDirection, string)" path="/exception"/>
+    public static SchemaDescriptionSet Describe<TInput, TOutput>(
+        this Schema<TInput, TOutput> schema,
+        JsonSchemaOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(schema);
+        ArgumentNullException.ThrowIfNull(options);
+
+        var context = new DescriptionContext(
+            options.ReferencePrefix,
+            options.Direction,
+            options.PropertyNamingPolicy,
+            options.EnumMemberNamingPolicy);
 
         return new SchemaDescriptionSet(context.Describe(schema), context.Definitions);
     }
