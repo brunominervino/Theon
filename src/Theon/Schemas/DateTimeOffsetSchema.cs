@@ -76,7 +76,7 @@ public sealed class DateTimeOffsetSchema : Schema<DateTimeOffset>
 
     /// <inheritdoc />
     public override SchemaDescription Describe(DescriptionContext context) =>
-        CheckDescription.Of(SchemaKind.String, _checks, "date-time");
+        CheckDescription.Of(context, SchemaKind.String, _checks, "date-time");
 
     /// <inheritdoc />
     public override bool TryParse(ref ParseContext context, DateTimeOffset input, out DateTimeOffset output)

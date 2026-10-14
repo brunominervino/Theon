@@ -15,6 +15,15 @@ internal abstract class Check<T>
     // Gets the message that overrides every provider for failures of this rule.
     internal string? Message { get; init; }
 
+    // Gets a value indicating whether this rule rewrites the value rather than judging it.
+    //
+    // Asked by the description rather than by the parse. A rule written after a normalization is
+    // checked against the normalized value, so it is not a constraint on what arrived, and a document
+    // claiming it of the input describes a server stricter than the real one. Expressed as a property
+    // every check answers rather than as a test for OverwriteCheck, because a list of rule types in
+    // shared code is the thing this repository refuses.
+    internal virtual bool Rewrites => false;
+
     // Gets a value indicating whether a failure here should stop the remaining checks on the
     // same value.
     // False by default, so that independent rules each get to report. Set it where a later rule
@@ -42,7 +51,7 @@ internal abstract class Check<T>
 
     // The type name, without the generic arity a runtime type name carries. Read at describe time
     // only, which is a start-up or tooling operation and never a parse.
-    private string RuleName
+    internal string RuleName
     {
         get
         {

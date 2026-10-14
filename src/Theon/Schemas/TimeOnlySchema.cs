@@ -56,7 +56,7 @@ public sealed class TimeOnlySchema : Schema<TimeOnly>
 
     /// <inheritdoc />
     public override SchemaDescription Describe(DescriptionContext context) =>
-        CheckDescription.Of(SchemaKind.String, _checks, "time");
+        CheckDescription.Of(context, SchemaKind.String, _checks, "time");
 
     /// <inheritdoc />
     public override bool TryParse(ref ParseContext context, TimeOnly input, out TimeOnly output)

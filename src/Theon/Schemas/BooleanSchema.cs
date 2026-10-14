@@ -55,7 +55,7 @@ public sealed class BooleanSchema : Schema<bool>
 
     /// <inheritdoc />
     public override SchemaDescription Describe(DescriptionContext context) =>
-        CheckDescription.Of(SchemaKind.Boolean, _checks);
+        CheckDescription.Of(context, SchemaKind.Boolean, _checks);
 
     /// <inheritdoc />
     public override bool TryParse(ref ParseContext context, bool input, out bool output)

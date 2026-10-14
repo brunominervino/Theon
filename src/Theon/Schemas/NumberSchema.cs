@@ -112,7 +112,7 @@ public sealed class NumberSchema<T> : Schema<T>
 
     /// <inheritdoc />
     public override SchemaDescription Describe(DescriptionContext context) =>
-        CheckDescription.Of(SchemaKinds.For(typeof(T)), _checks);
+        CheckDescription.Of(context, SchemaKinds.For(typeof(T)), _checks);
 
     /// <inheritdoc />
     public override bool TryParse(ref ParseContext context, T input, out T output)

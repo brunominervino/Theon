@@ -117,7 +117,7 @@ public sealed class SetSchema<TElement> : Schema<IReadOnlyCollection<TElement>>
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        var description = CheckDescription.Build(SchemaKind.Array, _checks);
+        var description = CheckDescription.Build(context, SchemaKind.Array, _checks);
 
         // Distinctness is stated when the set is described rather than contributed by a rule, because
         // a set is distinct by construction and has no such rule to contribute it.

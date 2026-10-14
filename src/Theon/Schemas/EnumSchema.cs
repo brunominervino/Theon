@@ -84,7 +84,7 @@ public sealed class EnumSchema<TEnum> : Schema<TEnum>
     /// <inheritdoc />
     public override SchemaDescription Describe(DescriptionContext context)
     {
-        var description = CheckDescription.Build(SchemaKind.String, _checks);
+        var description = CheckDescription.Build(context, SchemaKind.String, _checks);
 
         if (!IsFlags)
         {

@@ -340,9 +340,13 @@ public class JsonSchemaTests
     // A normalization rewrites the value rather than constraining it, so there is nothing to say
     // about it either.
     [Fact]
-    public void A_Normalization_Adds_Nothing() =>
+    public void A_Normalization_Adds_Nothing_And_Takes_Away_What_Follows_It() =>
+        // It added nothing, which it still does. What changed is that it now also removes the claims
+        // written after it: those were checked against the normalized value, so the input side cannot
+        // honestly assert them. Direction.Output asserts them exactly, and
+        // NormalizedInputDescriptionTests is where that pair is spelled out.
         Assert.Equal(
-            """{"type":"string","minLength":3}""",
+            """{"type":"string"}""",
             Json(Theo.String().Trim().ToLowerInvariant().MinLength(3)));
 
     // A schema that contains itself is written once under $defs and referred to from inside. Without

@@ -27,13 +27,41 @@ public class SchemaMetadataTests
             .MapPost("/users", (CreateUserRequest _) => Results.Ok())
             .Validate(TestApplication.UserSchema));
 
-        var described = metadata!.Describe();
+        // The output side, where every rule is exact: the test schema trims and lower-cases before it
+        // checks, so the input side deliberately claims less. See the sibling test below.
+        var described = metadata!.Describe(new JsonSchemaOptions
+        {
+            Direction = DescriptionDirection.Output,
+        });
+
         var properties = described.Root["properties"]!;
 
         Assert.Equal("object", described.Root["type"]!.GetValue<string>());
         Assert.Equal(3, properties["Name"]!["minLength"]!.GetValue<int>());
         Assert.Equal(50, properties["Name"]!["maxLength"]!.GetValue<int>());
         Assert.Equal("email", properties["Email"]!["format"]!.GetValue<string>());
+        Assert.Equal(18, properties["Age"]!["minimum"]!.GetValue<int>());
+    }
+
+    // The request side of the same schema. The filter accepts "  ADA@EXAMPLE.COM  ", because it trims
+    // and lower-cases before checking the address, so a document claiming format: email of the request
+    // would describe a stricter server than the real one -- and a client generated from it would
+    // refuse a value this endpoint takes. The rules that survive are the ones checked against what
+    // arrived, which here is the bound on Age.
+    [Fact]
+    public void The_Request_Side_Claims_Only_What_Arrives_Unnormalized()
+    {
+        var metadata = MetadataFor(builder => builder
+            .MapPost("/users", (CreateUserRequest _) => Results.Ok())
+            .Validate(TestApplication.UserSchema));
+
+        var properties = metadata!.Describe().Root["properties"]!;
+
+        Assert.Equal("string", properties["Name"]!["type"]!.GetValue<string>());
+        Assert.Null(properties["Name"]!["minLength"]);
+        Assert.Null(properties["Email"]!["format"]);
+
+        // Nothing normalizes Age, so its bounds are claims about what arrived and they stay.
         Assert.Equal(18, properties["Age"]!["minimum"]!.GetValue<int>());
     }
 

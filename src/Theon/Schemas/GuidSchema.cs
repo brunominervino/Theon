@@ -49,7 +49,7 @@ public sealed class GuidSchema : Schema<Guid>
 
     /// <inheritdoc />
     public override SchemaDescription Describe(DescriptionContext context) =>
-        CheckDescription.Of(SchemaKind.String, _checks, "uuid");
+        CheckDescription.Of(context, SchemaKind.String, _checks, "uuid");
 
     /// <inheritdoc />
     public override bool TryParse(ref ParseContext context, Guid input, out Guid output)

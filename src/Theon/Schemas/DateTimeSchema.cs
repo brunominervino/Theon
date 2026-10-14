@@ -100,7 +100,7 @@ public sealed class DateTimeSchema : Schema<DateTime>
 
     /// <inheritdoc />
     public override SchemaDescription Describe(DescriptionContext context) =>
-        CheckDescription.Of(SchemaKind.String, _checks, "date-time");
+        CheckDescription.Of(context, SchemaKind.String, _checks, "date-time");
 
     /// <inheritdoc />
     public override bool TryParse(ref ParseContext context, DateTime input, out DateTime output)

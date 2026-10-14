@@ -87,7 +87,7 @@ public sealed class RecordSchema<TKey, TValue> : Schema<IReadOnlyDictionary<TKey
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        var description = CheckDescription.Build(SchemaKind.Map, _checks);
+        var description = CheckDescription.Build(context, SchemaKind.Map, _checks);
 
         // The value schema becomes additionalProperties, which is how a document says "any key, this
         // kind of value". What the key schema requires has nowhere to go: propertyNames exists in the

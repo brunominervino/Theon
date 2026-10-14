@@ -257,7 +257,7 @@ public sealed class ObjectSchema<T> : Schema<T>
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        var description = CheckDescription.Build(SchemaKind.Object, _checks);
+        var description = CheckDescription.Build(context, SchemaKind.Object, _checks);
         var properties = new List<PropertyDescription>(_fields.Length);
 
         foreach (var field in _fields)

@@ -405,7 +405,7 @@ public sealed class StringSchema : Schema<string>
 
     /// <inheritdoc />
     public override SchemaDescription Describe(DescriptionContext context) =>
-        CheckDescription.Of(SchemaKind.String, _checks);
+        CheckDescription.Of(context, SchemaKind.String, _checks);
 
     /// <inheritdoc />
     public override bool TryParse(ref ParseContext context, string input, out string output)

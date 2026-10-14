@@ -94,7 +94,7 @@ public sealed class UriSchema : Schema<Uri>
 
     /// <inheritdoc />
     public override SchemaDescription Describe(DescriptionContext context) =>
-        CheckDescription.Of(SchemaKind.String, _checks, "uri-reference");
+        CheckDescription.Of(context, SchemaKind.String, _checks, "uri-reference");
 
     /// <inheritdoc />
     public override bool TryParse(ref ParseContext context, Uri input, out Uri output)

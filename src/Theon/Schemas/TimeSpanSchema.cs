@@ -81,7 +81,7 @@ public sealed class TimeSpanSchema : Schema<TimeSpan>
 
     /// <inheritdoc />
     public override SchemaDescription Describe(DescriptionContext context) =>
-        CheckDescription.Of(SchemaKind.String, _checks);
+        CheckDescription.Of(context, SchemaKind.String, _checks);
 
     /// <inheritdoc />
     public override bool TryParse(ref ParseContext context, TimeSpan input, out TimeSpan output)

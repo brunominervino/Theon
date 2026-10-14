@@ -115,7 +115,7 @@ public sealed class CollectionSchema<TElement> : Schema<IReadOnlyList<TElement>>
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        var description = CheckDescription.Build(SchemaKind.Array, _checks);
+        var description = CheckDescription.Build(context, SchemaKind.Array, _checks);
         description.Items = context.Describe(_element);
         return description.ToDescription();
     }

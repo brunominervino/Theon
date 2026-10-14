@@ -75,7 +75,7 @@ public sealed class DateOnlySchema : Schema<DateOnly>
 
     /// <inheritdoc />
     public override SchemaDescription Describe(DescriptionContext context) =>
-        CheckDescription.Of(SchemaKind.String, _checks, "date");
+        CheckDescription.Of(context, SchemaKind.String, _checks, "date");
 
     /// <inheritdoc />
     public override bool TryParse(ref ParseContext context, DateOnly input, out DateOnly output)
