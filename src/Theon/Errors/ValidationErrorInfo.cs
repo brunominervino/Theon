@@ -40,6 +40,23 @@ public readonly struct ValidationErrorInfo
     /// <summary>Gets the name of the format that was not matched, such as <c>email</c> or <c>regex</c>.</summary>
     public string? Format { get; init; }
 
+    /// <summary>Gets a code the caller chose, beside the one this library did.</summary>
+    /// <remarks>
+    /// <para>
+    /// <see cref="Code"/> is this library's vocabulary and is closed: every refinement produces
+    /// <see cref="ValidationErrorCode.Custom"/>, which says a caller-supplied rule rejected the value
+    /// and nothing about which one. A caller who needs to know which had only the message to go on,
+    /// and the message is explicitly not a contract.
+    /// </para>
+    /// <para>
+    /// This is the caller's half of that vocabulary — <c>"cnpj.digito_verificador"</c>, whatever their
+    /// own code names. It changes nothing about <see cref="Code"/>, so anything switching on the enum
+    /// sees what it always saw, and it reaches the message provider, so a provider can write the
+    /// sentence for one particular rule.
+    /// </para>
+    /// </remarks>
+    public string? CustomCode { get; init; }
+
     /// <summary>Gets the divisor, for <see cref="ValidationErrorCode.NotMultipleOf"/>.</summary>
     public object? Divisor { get; init; }
 }

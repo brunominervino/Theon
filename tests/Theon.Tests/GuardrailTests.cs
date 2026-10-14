@@ -74,7 +74,11 @@ public class GuardrailTests
     // produces a schema of that kind -- a C# type that can hold only null is not a type anybody
     // writes -- but a document read with Theo.JsonSchema may say it, and reading "only null" as "no
     // constraint" accepted every value where the document accepted one.
-    private const int PublicMemberCount = 389;
+    // 389 -> 392 members: ValidationErrorInfo.CustomCode, the ValidationError property promoting it,
+    // and one Refine overload that sets it. Codes are the contract and every refinement produced the
+    // same one, so a caller who needed to know which refinement failed had only the message -- which
+    // the error model says is not a contract. The enum is untouched, so nothing switching on it moves.
+    private const int PublicMemberCount = 392;
 
     // Generous by three orders of magnitude. A non-backtracking match of forty thousand characters
     // takes well under a millisecond; a backtracking one over the same input does not finish this

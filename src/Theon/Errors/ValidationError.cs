@@ -36,6 +36,10 @@ public sealed class ValidationError
     /// <summary>Gets the name of the format that was not matched, if any.</summary>
     public string? Format => _info.Format;
 
+    /// <summary>Gets the code the caller chose, if the rule that failed carried one.</summary>
+    /// <inheritdoc cref="ValidationErrorInfo.CustomCode" path="/remarks"/>
+    public string? CustomCode => _info.CustomCode;
+
     /// <summary>Returns the path and message, for example <c>address.zipCode: Invalid postcode</c>.</summary>
     public override string ToString() =>
         Path.IsRoot ? Message : string.Concat(Path.ToString(), ": ", Message);
